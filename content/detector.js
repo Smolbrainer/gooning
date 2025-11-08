@@ -4,8 +4,8 @@ class MemeDetector {
   constructor(selectedMemes) {
     this.memes = selectedMemes || [];
     this.detectionInterval = null;
-    this.lastDetection = {}; // Track last detection time per meme
-    this.cooldownPeriod = 30000; // 30 seconds cooldown between same meme detections
+    this.lastGlobalDetection = null; // Track last detection time (global cooldown)
+    this.cooldownPeriod = 30000; // 30 seconds global cooldown between ANY meme detections
     this.isDetecting = false;
     this.onDetectionCallback = null;
   }
@@ -97,22 +97,83 @@ class MemeDetector {
    */
   detectMemes(pageText) {
     const now = Date.now();
+    
+    // Check global cooldown first - only 1 meme every 30 seconds
+    if (this.lastGlobalDetection && (now - this.lastGlobalDetection) < this.cooldownPeriod) {
+      const remaining = Math.ceil((this.cooldownPeriod - (now - this.lastGlobalDetection)) / 1000);
+      // Silently skip - in cooldown
+      return;
+    }
+    
+    // Build frequency map for all memes
+    const memeFrequencies = [];
 
     for (const meme of this.memes) {
-      // Check cooldown
-      const lastDetected = this.lastDetection[meme.id];
-      if (lastDetected && (now - lastDetected) < this.cooldownPeriod) {
-        continue; // Still in cooldown period
-      }
+      // Count how many keywords match for this meme
+      const matchCount = this.countKeywordMatches(pageText, meme.keywords);
 
-      // Check if any keyword matches
-      const matched = this.checkKeywords(pageText, meme.keywords);
-
-      if (matched) {
-        console.log('Meme detected:', meme.name, 'keyword:', matched);
-        this.handleDetection(meme, matched);
+      if (matchCount > 0) {
+        memeFrequencies.push({
+          meme,
+          count: matchCount,
+          keywords: this.getMatchedKeywords(pageText, meme.keywords)
+        });
       }
     }
+
+    // If we found matches, trigger the most common one
+    if (memeFrequencies.length > 0) {
+      // Sort by frequency (highest first)
+      memeFrequencies.sort((a, b) => b.count - a.count);
+      
+      // Log frequency map
+      console.log('🎯 Meme frequency analysis:');
+      memeFrequencies.forEach((entry, index) => {
+        console.log(`  ${index + 1}. ${entry.meme.name}: ${entry.count} matches (${entry.keywords.join(', ')})`);
+      });
+      
+      const mostCommon = memeFrequencies[0];
+      console.log('✓ Showing most common:', mostCommon.meme.name);
+      console.log('⏳ Next detection possible in 30 seconds');
+      this.handleDetection(mostCommon.meme, mostCommon.keywords.join(', '));
+    } else {
+      // No matches found - don't play anything
+      // Silently continue scanning
+    }
+  }
+
+  /**
+   * Count how many keywords match in the text
+   * @param {string} text - Text to search
+   * @param {Array} keywords - Keywords to look for
+   * @returns {number} Number of matches
+   */
+  countKeywordMatches(text, keywords) {
+    let count = 0;
+    for (const keyword of keywords) {
+      const searchTerm = keyword.toLowerCase();
+      // Count occurrences of this keyword
+      const matches = (text.match(new RegExp(searchTerm, 'g')) || []).length;
+      count += matches;
+    }
+    return count;
+  }
+
+  /**
+   * Get all keywords that match in the text
+   * @param {string} text - Text to search
+   * @param {Array} keywords - Keywords to look for
+   * @returns {Array} Matched keywords
+   */
+  getMatchedKeywords(text, keywords) {
+    const matched = [];
+    for (const keyword of keywords) {
+      const searchTerm = keyword.toLowerCase();
+      if (text.includes(searchTerm)) {
+        matched.push(keyword);
+      }
+    }
+    return matched;
   }
 
   /**
@@ -139,8 +200,8 @@ class MemeDetector {
    * @param {string} matchedKeyword - The keyword that matched
    */
   handleDetection(meme, matchedKeyword) {
-    // Update last detection time
-    this.lastDetection[meme.id] = Date.now();
+    // Update global detection time - starts 30 second cooldown for ALL memes
+    this.lastGlobalDetection = Date.now();
 
     // Trigger callback
     if (this.onDetectionCallback) {
