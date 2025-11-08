@@ -141,6 +141,59 @@ async def create_meme(meme: MemeCreate, db: Client = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create meme: {str(e)}")
 
+@app.put("/api/memes/{meme_id}", response_model=Meme)
+async def update_meme(meme_id: UUID, meme: MemeCreate, db: Client = Depends(get_db)):
+    """
+    Update an existing meme
+
+    Args:
+        meme_id: UUID of the meme to update
+        meme: Updated meme data
+        db: Supabase client
+
+    Returns:
+        Updated meme object
+    """
+    try:
+        # Check if meme exists
+        existing = db.table("memes").select("*").eq("id", str(meme_id)).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Meme not found")
+        
+        # Update the meme
+        response = db.table("memes").update(meme.model_dump()).eq("id", str(meme_id)).execute()
+        return response.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update meme: {str(e)}")
+
+@app.delete("/api/memes/{meme_id}")
+async def delete_meme(meme_id: UUID, db: Client = Depends(get_db)):
+    """
+    Delete a meme
+
+    Args:
+        meme_id: UUID of the meme to delete
+        db: Supabase client
+
+    Returns:
+        Success message
+    """
+    try:
+        # Check if meme exists
+        existing = db.table("memes").select("*").eq("id", str(meme_id)).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Meme not found")
+        
+        # Delete the meme
+        db.table("memes").delete().eq("id", str(meme_id)).execute()
+        return {"message": "Meme deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete meme: {str(e)}")
+
 @app.get("/api/user-selections/{user_id}", response_model=UserSelection)
 async def get_user_selections(user_id: str, db: Client = Depends(get_db)):
     """

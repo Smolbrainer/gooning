@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import MemeList from './components/MemeList';
 import SelectedMemes from './components/SelectedMemes';
+import Stats from './components/Stats';
+import AddMeme from './components/AddMeme';
+import ManageMemes from './components/ManageMemes';
 
 function App() {
   const [memes, setMemes] = useState([]);
@@ -9,6 +12,7 @@ function App() {
   const [isEnabled, setIsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('select');
 
   // Load memes and settings on mount
   useEffect(() => {
@@ -124,6 +128,16 @@ function App() {
 
   const selectedMemes = memes.filter(m => selectedMemeIds.includes(m.id));
 
+  const handleMemeAdded = (newMeme) => {
+    setMemes([...memes, newMeme]);
+    // Optionally switch back to select tab
+    setActiveTab('select');
+  };
+
+  const handleMemesUpdated = (updatedMemes) => {
+    setMemes(updatedMemes);
+  };
+
   return (
     <div className="app">
       <Header
@@ -132,31 +146,76 @@ function App() {
         selectedCount={selectedMemeIds.length}
       />
 
+      <div className="tabs">
+        <button
+          className={`tab ${activeTab === 'select' ? 'active' : ''}`}
+          onClick={() => setActiveTab('select')}
+        >
+          Select
+        </button>
+        <button
+          className={`tab ${activeTab === 'stats' ? 'active' : ''}`}
+          onClick={() => setActiveTab('stats')}
+        >
+          Stats
+        </button>
+        <button
+          className={`tab ${activeTab === 'add' ? 'active' : ''}`}
+          onClick={() => setActiveTab('add')}
+        >
+          Add
+        </button>
+        <button
+          className={`tab ${activeTab === 'manage' ? 'active' : ''}`}
+          onClick={() => setActiveTab('manage')}
+        >
+          Manage
+        </button>
+      </div>
+
       {error && (
         <div className="error-banner">
           {error}
         </div>
       )}
 
-      {loading ? (
-        <div className="loading">Loading memes...</div>
-      ) : (
-        <>
-          {selectedMemes.length > 0 && (
-            <SelectedMemes
-              memes={selectedMemes}
-              onRemove={toggleMemeSelection}
-              onClearAll={clearAllSelections}
-            />
-          )}
+      <div className="tab-content">
+        {loading ? (
+          <div className="loading">Loading memes...</div>
+        ) : (
+          <>
+            {activeTab === 'select' && (
+              <>
+                {selectedMemes.length > 0 && (
+                  <SelectedMemes
+                    memes={selectedMemes}
+                    onRemove={toggleMemeSelection}
+                    onClearAll={clearAllSelections}
+                  />
+                )}
+                <MemeList
+                  memes={memes}
+                  selectedIds={selectedMemeIds}
+                  onToggle={toggleMemeSelection}
+                />
+              </>
+            )}
 
-          <MemeList
-            memes={memes}
-            selectedIds={selectedMemeIds}
-            onToggle={toggleMemeSelection}
-          />
-        </>
-      )}
+            {activeTab === 'stats' && <Stats />}
+
+            {activeTab === 'add' && (
+              <AddMeme onMemeAdded={handleMemeAdded} />
+            )}
+
+            {activeTab === 'manage' && (
+              <ManageMemes
+                memes={memes}
+                onMemesUpdated={handleMemesUpdated}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
