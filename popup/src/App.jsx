@@ -108,6 +108,24 @@ function App() {
     });
   };
 
+  const toggleAllMemes = async () => {
+    const allSelected = selectedMemeIds.length === memes.length;
+    const newSelected = allSelected ? [] : memes.map(m => m.id);
+
+    setSelectedMemeIds(newSelected);
+    await chrome.storage.local.set({ selectedMemes: newSelected });
+
+    // Notify content scripts
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'MEMES_UPDATED',
+          selectedMemes: newSelected
+        }).catch(() => {});
+      });
+    });
+  };
+
   const toggleEnabled = async () => {
     const newEnabled = !isEnabled;
     setIsEnabled(newEnabled);
@@ -186,17 +204,16 @@ function App() {
           <>
             {activeTab === 'select' && (
               <>
-                {selectedMemes.length > 0 && (
-                  <SelectedMemes
-                    memes={selectedMemes}
-                    onRemove={toggleMemeSelection}
-                    onClearAll={clearAllSelections}
-                  />
-                )}
+                <SelectedMemes
+                  memes={selectedMemes}
+                  onRemove={toggleMemeSelection}
+                  onClearAll={clearAllSelections}
+                />
                 <MemeList
                   memes={memes}
                   selectedIds={selectedMemeIds}
                   onToggle={toggleMemeSelection}
+                  onToggleAll={toggleAllMemes}
                 />
               </>
             )}

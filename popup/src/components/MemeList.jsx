@@ -1,6 +1,6 @@
 import React from 'react';
 
-function MemeList({ memes, selectedIds, onToggle }) {
+function MemeList({ memes, selectedIds, onToggle, onToggleAll }) {
   if (memes.length === 0) {
     return (
       <div className="empty-state">
@@ -10,9 +10,20 @@ function MemeList({ memes, selectedIds, onToggle }) {
     );
   }
 
+  const allSelected = memes.length > 0 && selectedIds.length === memes.length;
+
   return (
     <div className="meme-list">
-      <h2 className="section-title">Available Memes</h2>
+      <div className="meme-list-header">
+        <h2 className="section-title">Available Memes</h2>
+        <button
+          className="toggle-all-btn"
+          onClick={onToggleAll}
+          title={allSelected ? "Deselect all memes" : "Select all memes"}
+        >
+          {allSelected ? '✓ Deselect All' : 'Select All'}
+        </button>
+      </div>
       <div className="meme-grid">
         {memes.map(meme => (
           <div
