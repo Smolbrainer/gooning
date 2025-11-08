@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meme Detector</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+          <line x1="9" y1="9" x2="9.01" y2="9"/>
+          <line x1="15" y1="9" x2="15.01" y2="9"/>
+        </svg>
+        <h1>Meme Detector</h1>
+      </div>
+      <div class="header-actions">
+        <button id="settingsBtn" class="icon-btn" title="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M1 12h6m6 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="toggle-container">
+      <label class="toggle-label">
+        <input type="checkbox" id="enableToggle" checked>
+        <span class="toggle-slider"></span>
+        <span class="toggle-text">Detection Enabled</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- Settings Panel (Hidden by default) -->
+  <div id="settingsPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button id="closeSettingsBtn" class="icon-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="settings-content">
+      <!-- Detection Sensitivity -->
+      <div class="setting-item">
+        <label for="sensitivitySlider">
+          Detection Sensitivity
+          <span id="sensitivityValue">70%</span>
+        </label>
+        <input type="range" id="sensitivitySlider" min="0" max="100" value="70">
+      </div>
+
+      <!-- Autoplay -->
+      <div class="setting-item">
+        <label class="toggle-label">
+          <input type="checkbox" id="autoplayToggle" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Video Autoplay</span>
+        </label>
+      </div>
+
+      <!-- Overlay Position -->
+      <div class="setting-item">
+        <label>Overlay Position</label>
+        <div class="position-grid">
+          <button class="position-btn" data-position="top-left" title="Top Left">
+            <span class="position-icon">↖</span>
+          </button>
+          <button class="position-btn" data-position="top-right" title="Top Right">
+            <span class="position-icon">↗</span>
+          </button>
+          <button class="position-btn" data-position="bottom-left" title="Bottom Left">
+            <span class="position-icon">↙</span>
+          </button>
+          <button class="position-btn active" data-position="bottom-right" title="Bottom Right">
+            <span class="position-icon">↘</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="setting-item">
+        <label class="toggle-label">
+          <input type="checkbox" id="notificationsToggle" checked>
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Show Notifications</span>
+        </label>
+      </div>
+
+      <!-- API Status -->
+      <div class="setting-item">
+        <label>API Connection</label>
+        <div class="api-status">
+          <span id="apiStatusIndicator" class="status-indicator"></span>
+          <span id="apiStatusText">Checking...</span>
+          <button id="refreshApiBtn" class="small-btn">Refresh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Search Bar -->
+    <div class="search-container">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Search memes...">
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-category="all">All Memes</button>
+      <button class="tab" data-category="selected">Selected (<span id="selectedCount">0</span>)</button>
+      <button class="tab" data-category="trending">Trending</button>
+    </div>
+
+    <!-- Meme Library -->
+    <div id="memeLibrary" class="meme-library">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading memes...</p>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button id="clearAllBtn" class="action-btn secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+        Clear All
+      </button>
+      <button id="selectTrendingBtn" class="action-btn primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Select Trending
+      </button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="stats">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span id="statsText">0 detections today</span>
+    </div>
+    <a href="#" id="feedbackLink" class="link">Feedback</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
