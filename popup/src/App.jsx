@@ -1,0 +1,164 @@
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import MemeList from './components/MemeList';
+import SelectedMemes from './components/SelectedMemes';
+
+function App() {
+  const [memes, setMemes] = useState([]);
+  const [selectedMemeIds, setSelectedMemeIds] = useState([]);
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load memes and settings on mount
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load from chrome storage
+      const [storedMemes, storedSelected, settings] = await Promise.all([
+        chrome.storage.local.get(['allMemes']),
+        chrome.storage.local.get(['selectedMemes']),
+        chrome.storage.local.get(['settings'])
+      ]);
+
+      // If we have cached memes, use them
+      if (storedMemes.allMemes && storedMemes.allMemes.length > 0) {
+        setMemes(storedMemes.allMemes);
+      }
+
+      setSelectedMemeIds(storedSelected.selectedMemes || []);
+      setIsEnabled(settings.settings?.enabled !== false);
+
+      // Fetch fresh memes from API in background
+      fetchMemesFromAPI();
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError('Failed to load memes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMemesFromAPI = async () => {
+    try {
+      const API_BASE_URL = 'http://localhost:8000';
+      const response = await fetch(`${API_BASE_URL}/api/memes`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch memes from API');
+      }
+
+      const freshMemes = await response.json();
+      setMemes(freshMemes);
+
+      // Cache in storage
+      await chrome.storage.local.set({ allMemes: freshMemes });
+    } catch (err) {
+      console.error('Error fetching memes from API:', err);
+      // Don't show error if we already have cached memes
+      if (memes.length === 0) {
+        setError('Could not connect to API. Make sure the backend is running.');
+      }
+    }
+  };
+
+  const toggleMemeSelection = async (memeId) => {
+    const newSelected = selectedMemeIds.includes(memeId)
+      ? selectedMemeIds.filter(id => id !== memeId)
+      : [...selectedMemeIds, memeId];
+
+    setSelectedMemeIds(newSelected);
+    await chrome.storage.local.set({ selectedMemes: newSelected });
+
+    // Notify content scripts of the update
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'MEMES_UPDATED',
+          selectedMemes: newSelected
+        }).catch(() => {
+          // Ignore errors from tabs without content script
+        });
+      });
+    });
+  };
+
+  const clearAllSelections = async () => {
+    setSelectedMemeIds([]);
+    await chrome.storage.local.set({ selectedMemes: [] });
+
+    // Notify content scripts
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'MEMES_UPDATED',
+          selectedMemes: []
+        }).catch(() => {});
+      });
+    });
+  };
+
+  const toggleEnabled = async () => {
+    const newEnabled = !isEnabled;
+    setIsEnabled(newEnabled);
+
+    const settings = { enabled: newEnabled, autoplay: true, position: 'bottom-right' };
+    await chrome.storage.local.set({ settings });
+
+    // Notify content scripts
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'ENABLED_CHANGED',
+          enabled: newEnabled
+        }).catch(() => {});
+      });
+    });
+  };
+
+  const selectedMemes = memes.filter(m => selectedMemeIds.includes(m.id));
+
+  return (
+    <div className="app">
+      <Header
+        isEnabled={isEnabled}
+        onToggleEnabled={toggleEnabled}
+        selectedCount={selectedMemeIds.length}
+      />
+
+      {error && (
+        <div className="error-banner">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading">Loading memes...</div>
+      ) : (
+        <>
+          {selectedMemes.length > 0 && (
+            <SelectedMemes
+              memes={selectedMemes}
+              onRemove={toggleMemeSelection}
+              onClearAll={clearAllSelections}
+            />
+          )}
+
+          <MemeList
+            memes={memes}
+            selectedIds={selectedMemeIds}
+            onToggle={toggleMemeSelection}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+export default App;

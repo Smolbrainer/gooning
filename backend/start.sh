@@ -1,37 +1,28 @@
 #!/bin/bash
-# Quick start script for Meme Detector Backend
 
-echo "🚀 Starting Meme Detector Backend..."
-echo ""
+# Start FastAPI server for Meme Detector
+echo "Starting Meme Detector API..."
+
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "Error: .env file not found!"
+    echo "Please copy .env.example to .env and fill in your Supabase credentials"
+    exit 1
+fi
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
+    echo "Virtual environment not found. Creating one..."
     python3 -m venv venv
 fi
 
 # Activate virtual environment
-echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
 # Install dependencies
-echo "📥 Installing dependencies..."
-pip install -q -r requirements.txt
+echo "Installing dependencies..."
+pip install -r requirements.txt
 
-# Check if database exists
-if [ ! -f "data/memes.db" ]; then
-    echo "🌱 Database not found. Seeding database..."
-    python seed_data.py seed <<< "yes"
-else
-    echo "✅ Database found"
-fi
-
-echo ""
-echo "🎉 Starting API server on http://localhost:3000"
-echo "📚 API Documentation: http://localhost:3000/docs"
-echo ""
-echo "Press Ctrl+C to stop the server"
-echo ""
-
-# Start the server
-python -m app.main
+# Run the server
+echo "Starting server on http://localhost:8000"
+python main.py

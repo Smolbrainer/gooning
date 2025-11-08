@@ -1,59 +1,64 @@
-// Main Content Script
-// Coordinates detector and overlay components
+// Main Content Script for Meme Detector
 
 (async function() {
-  'use strict';
-
   console.log('Meme Detector content script loaded');
 
-  // Global instances
   let detector = null;
   let overlay = null;
-  let selectedMemes = [];
-  let settings = null;
+  let mutationObserver = null;
+  let isEnabled = true;
 
   /**
    * Initialize the content script
    */
-  async function initialize() {
+  async function init() {
     try {
-      // Check if page is blacklisted
-      const isBlacklisted = await checkBlacklist();
-      if (isBlacklisted) {
-        console.log('Page is blacklisted, skipping detection');
+      // Check if extension is enabled
+      const settings = await chrome.storage.local.get(['settings']);
+      isEnabled = settings.settings?.enabled !== false;
+
+      if (!isEnabled) {
+        console.log('Meme Detector is disabled');
         return;
       }
 
-      // Get settings and selected memes from background
-      const data = await getDataFromBackground();
+      // Get selected memes from storage
+      const result = await chrome.storage.local.get(['selectedMemes', 'allMemes']);
+      const selectedIds = result.selectedMemes || [];
+      const allMemes = result.allMemes || [];
 
-      if (!data.success) {
-        console.error('Failed to get data from background:', data.error);
+      if (selectedIds.length === 0) {
+        console.log('No memes selected for detection');
         return;
       }
 
-      settings = data.settings;
-      selectedMemes = data.selectedMemes;
+      // Filter to get only selected memes
+      const selectedMemes = allMemes.filter(meme => selectedIds.includes(meme.id));
 
-      // Initialize overlay
+      if (selectedMemes.length === 0) {
+        console.log('No meme data available');
+        return;
+      }
+
+      console.log(`Initializing detector with ${selectedMemes.length} memes`);
+
+      // Create detector
+      detector = new window.MemeDetector(selectedMemes);
+
+      // Create overlay (will be created on first show)
       overlay = new window.MemeOverlay();
-      overlay.initialize(settings);
-      window.memeOverlay = overlay;
 
-      // Initialize detector
-      detector = new window.MemeDetector();
-      await detector.initialize(selectedMemes, settings);
-      window.memeDetector = detector;
+      // Set up detection callback
+      detector.onDetection((meme, matchedKeyword) => {
+        console.log('Meme detected:', meme.name, '(keyword:', matchedKeyword + ')');
+        overlay.show(meme);
+      });
 
-      // Start detection if enabled and memes are selected
-      if (settings.enabled && selectedMemes.length > 0) {
-        detector.startDetection();
-      } else {
-        console.log('Detection not started:', {
-          enabled: settings.enabled,
-          memesCount: selectedMemes.length
-        });
-      }
+      // Start detection
+      detector.startDetection();
+
+      // Set up mutation observer for dynamic content
+      setupMutationObserver();
 
       console.log('Meme Detector initialized successfully');
     } catch (error) {
@@ -62,199 +67,131 @@
   }
 
   /**
-   * Check if current page is blacklisted
+   * Set up MutationObserver to detect dynamic content changes
    */
-  async function checkBlacklist() {
-    try {
-      const result = await chrome.storage.sync.get('blacklistedUrls');
-      const blacklist = result.blacklistedUrls || [];
-      const hostname = window.location.hostname;
+  function setupMutationObserver() {
+    if (mutationObserver) return;
 
-      return blacklist.some(url => hostname.includes(url));
-    } catch (error) {
-      console.error('Error checking blacklist:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get data from background script
-   */
-  async function getDataFromBackground() {
-    try {
-      // Get memes and selected memes
-      const memesResponse = await chrome.runtime.sendMessage({
-        type: 'GET_MEMES'
+    mutationObserver = new MutationObserver((mutations) => {
+      // Check if there are significant changes
+      const hasSignificantChanges = mutations.some(mutation => {
+        return mutation.addedNodes.length > 0 ||
+               mutation.removedNodes.length > 0 ||
+               mutation.type === 'characterData';
       });
 
-      if (!memesResponse.success) {
-        return {
-          success: false,
-          error: 'Failed to get memes'
-        };
+      if (hasSignificantChanges && detector) {
+        // Debounce: scan after changes settle
+        debounce(() => {
+          detector.scanPage();
+        }, 500);
       }
+    });
 
-      // Get settings
-      const settingsResult = await chrome.storage.sync.get('settings');
-      const defaultSettings = {
-        enabled: true,
-        detectionSensitivity: 0.7,
-        autoplay: true,
-        overlayPosition: 'bottom-right',
-        showNotifications: true,
-        detectionCooldown: 30000
-      };
+    // Observe document body for changes
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
 
-      const settings = { ...defaultSettings, ...(settingsResult.settings || {}) };
-
-      // Filter memes to only selected ones
-      const allMemes = memesResponse.memes || [];
-      const selectedIds = memesResponse.selectedMemes || [];
-      const selectedMemes = allMemes.filter(meme => selectedIds.includes(meme.id));
-
-      return {
-        success: true,
-        settings: settings,
-        selectedMemes: selectedMemes,
-        allMemes: allMemes
-      };
-    } catch (error) {
-      console.error('Error getting data from background:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
+    console.log('MutationObserver set up');
   }
 
   /**
-   * Listen for messages from background script
+   * Debounce function to limit execution frequency
+   */
+  let debounceTimer;
+  function debounce(func, delay) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(func, delay);
+  }
+
+  /**
+   * Clean up resources
+   */
+  function cleanup() {
+    if (detector) {
+      detector.stopDetection();
+      detector = null;
+    }
+
+    if (overlay) {
+      overlay.destroy();
+      overlay = null;
+    }
+
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
+    }
+
+    console.log('Cleaned up Meme Detector');
+  }
+
+  /**
+   * Handle messages from popup or background script
    */
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Content script received message:', message.type);
 
-    switch (message.type) {
-      case 'SETTINGS_UPDATED':
-        handleSettingsUpdate(message.settings);
-        sendResponse({ success: true });
-        break;
+    if (message.type === 'MEMES_UPDATED') {
+      // User changed meme selection in popup
+      console.log('Memes updated, reinitializing...');
+      cleanup();
 
-      case 'SELECTED_MEMES_UPDATED':
-        handleSelectedMemesUpdate(message.selectedMemes);
-        sendResponse({ success: true });
-        break;
+      // Reinitialize with new selection
+      setTimeout(() => {
+        init();
+      }, 100);
 
-      case 'STOP_DETECTION':
-        if (detector) {
-          detector.stopDetection();
-        }
-        sendResponse({ success: true });
-        break;
-
-      case 'START_DETECTION':
-        if (detector && settings && settings.enabled) {
-          detector.startDetection();
-        }
-        sendResponse({ success: true });
-        break;
-
-      case 'PING':
-        sendResponse({ success: true, active: true });
-        break;
-
-      default:
-        sendResponse({ success: false, error: 'Unknown message type' });
+      sendResponse({ success: true });
     }
 
-    return false;
-  });
+    if (message.type === 'ENABLED_CHANGED') {
+      // Extension enabled/disabled
+      isEnabled = message.enabled;
 
-  /**
-   * Handle settings update
-   */
-  async function handleSettingsUpdate(newSettings) {
-    settings = { ...settings, ...newSettings };
+      if (isEnabled) {
+        console.log('Extension enabled, starting detection...');
+        init();
+      } else {
+        console.log('Extension disabled, stopping detection...');
+        cleanup();
+      }
 
-    // Update detector
-    if (detector) {
-      detector.updateSettings(settings);
+      sendResponse({ success: true });
     }
 
-    // Update overlay
-    if (overlay) {
-      overlay.updateSettings(settings);
-    }
-
-    console.log('Settings updated:', settings);
-  }
-
-  /**
-   * Handle selected memes update
-   */
-  async function handleSelectedMemesUpdate(newSelectedIds) {
-    try {
-      // Get all memes
-      const memesResponse = await chrome.runtime.sendMessage({
-        type: 'GET_MEMES'
+    if (message.type === 'PING') {
+      // Health check
+      sendResponse({
+        active: detector?.isActive() || false,
+        memesCount: detector?.memes?.length || 0
       });
-
-      if (memesResponse.success) {
-        const allMemes = memesResponse.memes || [];
-        selectedMemes = allMemes.filter(meme => newSelectedIds.includes(meme.id));
-
-        // Update detector
-        if (detector) {
-          detector.updateSelectedMemes(selectedMemes);
-
-          // Restart detection if it was running
-          if (settings && settings.enabled) {
-            detector.stopDetection();
-            detector.startDetection();
-          }
-        }
-
-        console.log('Selected memes updated:', selectedMemes.length);
-      }
-    } catch (error) {
-      console.error('Error updating selected memes:', error);
     }
-  }
+  });
 
-  /**
-   * Handle page visibility changes
-   */
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      // Page is hidden, pause detection to save resources
-      if (detector) {
-        detector.stopDetection();
-      }
-    } else {
-      // Page is visible again, resume detection
-      if (detector && settings && settings.enabled && selectedMemes.length > 0) {
-        detector.startDetection();
+  // Listen for storage changes
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local') {
+      if (changes.selectedMemes || changes.settings) {
+        console.log('Storage changed, reinitializing...');
+        cleanup();
+        setTimeout(() => init(), 100);
       }
     }
   });
 
-  /**
-   * Clean up on page unload
-   */
-  window.addEventListener('beforeunload', () => {
-    if (detector) {
-      detector.stopDetection();
-    }
-    if (overlay) {
-      overlay.destroy();
-    }
-  });
-
-  // Wait for DOM to be ready
+  // Wait for page to be fully loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    // DOM is already ready
-    initialize();
+    // Page already loaded
+    init();
   }
+
+  // Clean up on page unload
+  window.addEventListener('beforeunload', cleanup);
 
 })();

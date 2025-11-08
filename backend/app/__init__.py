@@ -1,1 +1,0 @@
-# FastAPI Meme Detector Backend

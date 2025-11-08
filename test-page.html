@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Detector Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #667eea;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .keyword {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Meme Detector Test Page</h1>
+    <p>This page contains various meme keywords to test the detection system.</p>
+
+    <div class="section">
+        <h2>Finance Memes</h2>
+        <p>Let's talk about <span class="keyword">stonks</span> and investing in the stock market!</p>
+        <p>When you check your portfolio and everything is going up: <span class="keyword">stonks</span> rising!</p>
+    </div>
+
+    <div class="section">
+        <h2>Reaction Memes</h2>
+        <p>When everything is going wrong but you pretend it's okay: <span class="keyword">this is fine</span></p>
+        <p>That moment of shock: <span class="keyword">surprised pikachu</span> face!</p>
+        <p>When someone says something obvious and you just sit there with a <span class="keyword">surprised pikachu</span> expression.</p>
+    </div>
+
+    <div class="section">
+        <h2>Classic Memes</h2>
+        <p>Remember the <span class="keyword">distracted boyfriend</span> meme? Classic!</p>
+        <p>That <span class="keyword">woman yelling at cat</span> dinner table argument though...</p>
+    </div>
+
+    <div class="section">
+        <h2>Gaming Memes</h2>
+        <p>When your friend loses in the game: <span class="keyword">press f</span> to pay respects</p>
+        <p>Time to <span class="keyword">press f</span> in chat!</p>
+    </div>
+
+    <div class="section">
+        <h2>Intelligence Memes</h2>
+        <p>When you have a brilliant idea: <span class="keyword">big brain</span> time!</p>
+        <p>The <span class="keyword">expanding brain</span> meme perfectly describes my thought process.</p>
+    </div>
+
+    <div class="section">
+        <h2>Pop Culture</h2>
+        <p>Remember when <span class="keyword">bernie sanders</span> was sitting with those <span class="keyword">mittens</span>?</p>
+        <p>The <span class="keyword">drake</span> hotline bling format is still going strong!</p>
+    </div>
+
+    <div class="section">
+        <h2>Dynamic Content Test</h2>
+        <p>Click the button to add more content with meme keywords:</p>
+        <button onclick="addContent()">Add Dynamic Content</button>
+        <div id="dynamic-content"></div>
+    </div>
+
+    <script>
+        function addContent() {
+            const content = document.getElementById('dynamic-content');
+            const memes = [
+                'Wow, these stonks are really going up!',
+                'This is fine, everything is fine!',
+                'Surprised pikachu strikes again!',
+                'Press f to pay respects for my productivity today',
+                'Big brain move right there'
+            ];
+            const randomMeme = memes[Math.floor(Math.random() * memes.length)];
+            const p = document.createElement('p');
+            p.textContent = '🎭 ' + randomMeme;
+            p.style.marginTop = '10px';
+            p.style.padding = '10px';
+            p.style.background = '#e3f2fd';
+            p.style.borderRadius = '4px';
+            content.appendChild(p);
+        }
+    </script>
+</body>
+</html>
