@@ -78,6 +78,29 @@ meme-detector-extension/
      const API_BASE_URL = 'http://localhost:3000/api'; // Change to your backend URL
      ```
 
+## Backend Setup
+
+A FastAPI backend is included in the `backend/` directory!
+
+### Quick Start
+
+1. Navigate to backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Run the start script:
+   ```bash
+   ./start.sh          # macOS/Linux
+   start.bat           # Windows
+   ```
+
+3. The API will be running at `http://localhost:3000`
+   - API Docs: http://localhost:3000/docs
+   - Health Check: http://localhost:3000/api/health
+
+See [backend/README.md](backend/README.md) for detailed backend documentation.
+
 ## Backend API Requirements
 
 The extension requires a backend API with the following endpoints:
