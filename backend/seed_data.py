@@ -7,6 +7,10 @@ import os
 import sys
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from dotenv import load_dotenv
+
+# Load environment variables FIRST
+load_dotenv()
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
