@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import MemeList from './components/MemeList';
-import SelectedMemes from './components/SelectedMemes';
 import Stats from './components/Stats';
 import AddMeme from './components/AddMeme';
 import ManageMemes from './components/ManageMemes';
@@ -93,21 +92,6 @@ function App() {
     });
   };
 
-  const clearAllSelections = async () => {
-    setSelectedMemeIds([]);
-    await chrome.storage.local.set({ selectedMemes: [] });
-
-    // Notify content scripts
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, {
-          type: 'MEMES_UPDATED',
-          selectedMemes: []
-        }).catch(() => {});
-      });
-    });
-  };
-
   const toggleAllMemes = async () => {
     const allSelected = selectedMemeIds.length === memes.length;
     const newSelected = allSelected ? [] : memes.map(m => m.id);
@@ -143,8 +127,6 @@ function App() {
       });
     });
   };
-
-  const selectedMemes = memes.filter(m => selectedMemeIds.includes(m.id));
 
   const handleMemeAdded = (newMeme) => {
     setMemes([...memes, newMeme]);
@@ -203,19 +185,12 @@ function App() {
         ) : (
           <>
             {activeTab === 'select' && (
-              <>
-                <SelectedMemes
-                  memes={selectedMemes}
-                  onRemove={toggleMemeSelection}
-                  onClearAll={clearAllSelections}
-                />
-                <MemeList
-                  memes={memes}
-                  selectedIds={selectedMemeIds}
-                  onToggle={toggleMemeSelection}
-                  onToggleAll={toggleAllMemes}
-                />
-              </>
+              <MemeList
+                memes={memes}
+                selectedIds={selectedMemeIds}
+                onToggle={toggleMemeSelection}
+                onToggleAll={toggleAllMemes}
+              />
             )}
 
             {activeTab === 'stats' && <Stats />}

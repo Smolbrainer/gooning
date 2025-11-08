@@ -138,129 +138,55 @@ input:checked + .toggle-slider:before {
   margin-bottom: 12px;
 }
 
-/* Selected Memes */
-.selected-memes {
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+/* Search Bar */
+.search-box {
+  position: relative;
+  margin-bottom: 16px;
 }
 
-.selected-memes.empty {
-  padding: 12px 16px;
-}
-
-.selected-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.selected-header h3 {
+.search-input {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
-  color: #666;
-  margin: 0;
-}
-
-.clear-all-btn {
-  background: none;
-  border: 1px solid #dc3545;
-  color: #dc3545;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: inherit;
   transition: all 0.2s;
 }
 
-.clear-all-btn:hover {
-  background: #dc3545;
-  color: white;
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* Horizontal scrolling chip list */
-.selected-list-horizontal {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 4px 0 8px 0;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc #f1f1f1;
+.search-input::placeholder {
+  color: #999;
 }
 
-.selected-list-horizontal::-webkit-scrollbar {
-  height: 6px;
-}
-
-.selected-list-horizontal::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.selected-list-horizontal::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-.selected-list-horizontal::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
-
-.selected-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 6px 10px 6px 12px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-
-.selected-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.chip-name {
-  line-height: 1;
-}
-
-.chip-remove {
-  background: rgba(255, 255, 255, 0.25);
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e0e0e0;
   border: none;
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
+  color: #666;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  padding: 0;
-  width: 18px;
-  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   transition: all 0.2s;
-  line-height: 1;
 }
 
-.chip-remove:hover {
-  background: rgba(255, 255, 255, 0.4);
-  transform: scale(1.1);
-}
-
-.empty-chips {
-  color: #999;
-  font-size: 12px;
-  font-style: italic;
-  padding: 4px 0;
+.clear-search-btn:hover {
+  background: #ccc;
+  color: #333;
 }
 
 /* Meme List */
