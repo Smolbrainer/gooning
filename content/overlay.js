@@ -10,6 +10,42 @@ class MemeOverlay {
   }
 
   /**
+   * Check if URL is a YouTube URL
+   * @param {string} url - URL to check
+   * @returns {boolean}
+   */
+  isYouTubeUrl(url) {
+    if (!url) return false;
+    return url.includes('youtube.com/') || url.includes('youtu.be/');
+  }
+
+  /**
+   * Convert YouTube URL to embed URL
+   * @param {string} url - YouTube URL
+   * @returns {string} Embed URL
+   */
+  getYouTubeEmbedUrl(url) {
+    let videoId = '';
+    
+    // Handle youtube.com/watch?v=VIDEO_ID
+    if (url.includes('youtube.com/watch')) {
+      const urlParams = new URLSearchParams(new URL(url).search);
+      videoId = urlParams.get('v');
+    }
+    // Handle youtu.be/VIDEO_ID
+    else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split(/[?&]/)[0];
+    }
+    // Handle youtube.com/embed/VIDEO_ID
+    else if (url.includes('youtube.com/embed/')) {
+      videoId = url.split('youtube.com/embed/')[1].split(/[?&]/)[0];
+    }
+    
+    // Return embed URL with autoplay and sound
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=0&showinfo=0&rel=0&modestbranding=1`;
+  }
+
+  /**
    * Create overlay HTML and inject into page
    */
   create(memes = []) {
@@ -33,13 +69,32 @@ class MemeOverlay {
 
     // Build meme containers for each meme (no UI elements)
     const memeContainers = memes.map((meme, index) => {
-      const isGif = meme.video_url?.toLowerCase().endsWith('.gif');
-      const mediaElement = isGif
-        ? `<img class="md-video md-gif" data-video-index="${index}" src="${meme.video_url}" alt="${meme.name}">`
-        : `<video class="md-video" data-video-index="${index}" loop playsinline muted>
-            <source src="${meme.video_url}" type="video/mp4">
+      const url = meme.video_url;
+      const isGif = url?.toLowerCase().endsWith('.gif');
+      const isYouTube = this.isYouTubeUrl(url);
+      
+      let mediaElement;
+      
+      if (isYouTube) {
+        // Convert YouTube URL to embed URL and create iframe
+        const embedUrl = this.getYouTubeEmbedUrl(url);
+        mediaElement = `<iframe 
+          class="md-video md-youtube" 
+          data-video-index="${index}" 
+          src="${embedUrl}" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+        </iframe>`;
+      } else if (isGif) {
+        mediaElement = `<img class="md-video md-gif" data-video-index="${index}" src="${url}" alt="${meme.name}">`;
+      } else {
+        // Regular video file - unmute for audio
+        mediaElement = `<video class="md-video" data-video-index="${index}" loop playsinline>
+            <source src="${url}" type="video/mp4">
             Your browser does not support the video tag.
           </video>`;
+      }
       
       return `
         <div class="md-container" data-meme-index="${index}">
@@ -68,9 +123,10 @@ class MemeOverlay {
   setupEventListeners() {
     // No click handlers - overlay will auto-fade
 
-    // Separate videos from GIFs
+    // Separate media types
     const actualVideos = this.videos.filter(el => el.tagName === 'VIDEO');
     const gifImages = this.videos.filter(el => el.tagName === 'IMG');
+    const youtubeIframes = this.videos.filter(el => el.tagName === 'IFRAME');
 
     // Video error and play handling (only for actual videos)
     actualVideos.forEach((video, index) => {
@@ -94,8 +150,15 @@ class MemeOverlay {
       });
     });
 
+    // YouTube iframe handling
+    youtubeIframes.forEach((iframe, index) => {
+      iframe.addEventListener('load', () => {
+        console.log('YouTube iframe', index, 'loaded successfully');
+      });
+    });
+
     // Intersection observer to play/pause videos as they scroll into view
-    // Only applies to actual video elements, not GIFs
+    // Only applies to actual video elements, not GIFs or YouTube (YouTube autoplays via URL params)
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const element = entry.target;
@@ -113,7 +176,7 @@ class MemeOverlay {
       threshold: 0.5 // Play when 50% visible
     });
 
-    // Observe all media elements (videos and gifs)
+    // Observe all media elements
     this.videos.forEach(element => observer.observe(element));
 
     // Hide scroll indicator after first scroll
@@ -163,7 +226,8 @@ class MemeOverlay {
     this.overlay.classList.add('md-visible');
     this.isVisible = true;
 
-    // Start playing first video (if it's a video element, not a GIF)
+    // Start playing first video (if it's a video element, not a GIF or YouTube)
+    // YouTube iframes autoplay via URL parameters
     if (this.videos.length > 0 && this.videos[0].tagName === 'VIDEO') {
       try {
         await this.videos[0].play();
@@ -186,6 +250,9 @@ class MemeOverlay {
   fadeOut() {
     if (!this.overlay || !this.isVisible) return;
 
+    // Stop all audio immediately when fade starts
+    this.stopAllAudio();
+
     // Add fade-out class for transition
     this.overlay.classList.add('md-fading-out');
 
@@ -196,16 +263,37 @@ class MemeOverlay {
   }
 
   /**
+   * Stop audio from all media elements
+   */
+  stopAllAudio() {
+    this.videos.forEach(element => {
+      if (element.tagName === 'VIDEO') {
+        // Mute and pause video elements
+        element.muted = true;
+        element.pause();
+      } else if (element.tagName === 'IFRAME') {
+        // For YouTube iframes, we need to remove them to stop audio
+        // OR use YouTube API to pause, but removing is simpler
+        element.src = '';
+      }
+    });
+  }
+
+  /**
    * Hide overlay
    */
   hide() {
     if (!this.overlay || !this.isVisible) return;
 
-    // Stop all videos (only actual video elements, not GIFs)
+    // Stop all audio and videos
     this.videos.forEach(element => {
       if (element.tagName === 'VIDEO') {
         element.pause();
         element.currentTime = 0;
+        element.muted = true;
+      } else if (element.tagName === 'IFRAME') {
+        // Stop YouTube audio by clearing iframe
+        element.src = '';
       }
     });
 

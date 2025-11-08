@@ -150,7 +150,7 @@ function AddMeme({ onMemeAdded }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="video_url">Video/GIF URL *</label>
+          <label htmlFor="video_url">Video/GIF/YouTube URL *</label>
           <input
             type="url"
             id="video_url"
@@ -158,10 +158,10 @@ function AddMeme({ onMemeAdded }) {
             value={formData.video_url}
             onChange={handleChange}
             required
-            placeholder="https://example.com/meme.mp4"
+            placeholder="https://youtube.com/watch?v=... or https://example.com/meme.mp4"
           />
           <small className="form-hint">
-            Supports .mp4, .webm, .gif files
+            Supports YouTube URLs, .mp4, .webm, .gif files (with audio!)
           </small>
         </div>
 
