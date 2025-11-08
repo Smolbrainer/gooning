@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme Detector Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #666;
+        }
+        .keyword {
+            background: #ffeb3b;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h2>📝 Testing Instructions</h2>
+        <ol>
+            <li>Make sure the Meme Detector extension is loaded and enabled</li>
+            <li>Open the extension popup and select some memes</li>
+            <li>Enable detection in the extension settings</li>
+            <li>Scroll through this page - the extension should detect memes!</li>
+        </ol>
+    </div>
+
+    <h1>🎭 Meme Detector Test Page</h1>
+    <p>This page contains keywords that should trigger meme detection in your Chrome extension.</p>
+
+    <div class="test-section">
+        <h2>Test 1: Drake Hotline Bling</h2>
+        <p>
+            The <span class="keyword">drake hotline bling</span> meme is one of the most popular reaction memes.
+            It shows <span class="keyword">drake</span> rejecting one thing and approving another.
+            Perfect for showing <span class="keyword">choice</span> between two options!
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: This Is Fine</h2>
+        <p>
+            Everything is <span class="keyword">fine</span>, totally <span class="keyword">fine</span>.
+            The dog sitting in a <span class="keyword">burning</span> room saying "<span class="keyword">this is fine</span>"
+            is a perfect meme for when things are clearly not okay but you're in <span class="keyword">denial</span>.
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Distracted Boyfriend</h2>
+        <p>
+            The <span class="keyword">distracted boyfriend</span> meme shows a man
+            <span class="keyword">looking at other girl</span> while his
+            <span class="keyword">jealous girlfriend</span> looks on disapprovingly.
+            Classic meme for showing <span class="keyword">cheating</span> on something familiar for something new.
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Surprised Pikachu</h2>
+        <p>
+            <span class="keyword">Surprised pikachu</span> is the perfect reaction when you're
+            <span class="keyword">shocked</span> by something completely <span class="keyword">unexpected</span>.
+            This <span class="keyword">pokemon</span> meme captures that moment of <span class="keyword">surprise</span> perfectly!
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Stonks</h2>
+        <p>
+            <span class="keyword">Stonks</span> 📈 When your <span class="keyword">stocks</span> and
+            <span class="keyword">investment</span> go up, you make <span class="keyword">money</span> and
+            <span class="keyword">profit</span>. Not stonks when you have <span class="keyword">loss</span>!
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 6: Roll Safe</h2>
+        <p>
+            The <span class="keyword">roll safe</span> meme shows a man
+            <span class="keyword">tapping head</span> with a <span class="keyword">smart thinking</span>
+            expression. Perfect for showing <span class="keyword">big brain</span>
+            <span class="keyword">genius</span> moments (whether they're actually smart or not!).
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 7: Coffin Dance</h2>
+        <p>
+            The <span class="keyword">coffin dance</span> meme, also known as
+            <span class="keyword">astronomia</span>, features <span class="keyword">dancing pallbearers</span>
+            carrying a <span class="keyword">funeral</span> coffin. This trending <span class="keyword">meme</span>
+            became hugely popular!
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 8: Doge</h2>
+        <p>
+            Such <span class="keyword">doge</span>, <span class="keyword">much</span> meme,
+            <span class="keyword">very</span> <span class="keyword">wow</span>! The <span class="keyword">shiba inu</span>
+            dog with comic sans text, <span class="keyword">so</span> classic!
+        </p>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Results</h2>
+        <ul>
+            <li>✅ Extension should detect memes as you scroll</li>
+            <li>✅ Overlays should appear when memes are detected</li>
+            <li>✅ Videos should play when you click the overlay</li>
+            <li>✅ Check browser console (F12) for detection logs</li>
+        </ul>
+    </div>
+
+    <div class="instructions">
+        <h2>🔍 Debugging Tips</h2>
+        <ul>
+            <li><strong>No detection?</strong> Make sure you've selected memes in the popup and enabled detection</li>
+            <li><strong>Check Console:</strong> Press F12 and look for "Meme detected:" messages</li>
+            <li><strong>Backend Running?</strong> Your backend should be running on http://localhost:3000</li>
+            <li><strong>Test Backend:</strong> Visit <a href="http://localhost:3000/api/health" target="_blank">http://localhost:3000/api/health</a></li>
+        </ul>
+    </div>
+</body>
+</html>
