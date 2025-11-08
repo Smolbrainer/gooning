@@ -31,40 +31,24 @@ class MemeOverlay {
       </div>
     `;
 
-    // Build meme containers for each meme
+    // Build meme containers for each meme (no UI elements)
     const memeContainers = memes.map((meme, index) => {
       const isGif = meme.video_url?.toLowerCase().endsWith('.gif');
       const mediaElement = isGif
         ? `<img class="md-video md-gif" data-video-index="${index}" src="${meme.video_url}" alt="${meme.name}">`
-        : `<video class="md-video" data-video-index="${index}" loop playsinline>
+        : `<video class="md-video" data-video-index="${index}" loop playsinline muted>
             <source src="${meme.video_url}" type="video/mp4">
             Your browser does not support the video tag.
           </video>`;
       
       return `
         <div class="md-container" data-meme-index="${index}">
-          <div class="md-video-wrapper">
-            ${mediaElement}
-          </div>
-          <div class="md-info">
-            <h2>${meme.name}</h2>
-            <p>${index + 1} / ${memes.length}</p>
-          </div>
+          ${mediaElement}
         </div>
       `;
     }).join('');
 
-    // Add scroll indicator if multiple memes
-    const scrollIndicator = memes.length > 1 ? `
-      <div class="md-scroll-indicator">
-        <span>Scroll for more</span>
-        <svg fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-        </svg>
-      </div>
-    ` : '';
-
-    this.overlay.innerHTML = header + memeContainers + scrollIndicator;
+    this.overlay.innerHTML = memeContainers;
 
     // Inject into page
     document.body.appendChild(this.overlay);
@@ -82,18 +66,7 @@ class MemeOverlay {
    * Set up event listeners for overlay controls
    */
   setupEventListeners() {
-    // Close button
-    const closeBtn = this.overlay.querySelector('.md-close');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => this.hide());
-    }
-
-    // Click on dark area to close
-    this.overlay.addEventListener('click', (e) => {
-      if (e.target === this.overlay || (e.target.classList && e.target.classList.contains('md-container'))) {
-        this.hide();
-      }
-    });
+    // No click handlers - overlay will auto-fade
 
     // Separate videos from GIFs
     const actualVideos = this.videos.filter(el => el.tagName === 'VIDEO');
@@ -190,9 +163,6 @@ class MemeOverlay {
     this.overlay.classList.add('md-visible');
     this.isVisible = true;
 
-    // Lock body scroll
-    document.body.classList.add('md-overlay-open');
-
     // Start playing first video (if it's a video element, not a GIF)
     if (this.videos.length > 0 && this.videos[0].tagName === 'VIDEO') {
       try {
@@ -202,7 +172,27 @@ class MemeOverlay {
       }
     }
 
+    // Auto-fade after 5 seconds
+    setTimeout(() => {
+      this.fadeOut();
+    }, 5000);
+
     console.log('Showing overlay with', memes.length, 'meme(s)');
+  }
+
+  /**
+   * Fade out the overlay slowly
+   */
+  fadeOut() {
+    if (!this.overlay || !this.isVisible) return;
+
+    // Add fade-out class for transition
+    this.overlay.classList.add('md-fading-out');
+
+    // After fade completes, hide completely
+    setTimeout(() => {
+      this.hide();
+    }, 2000); // 2 second fade
   }
 
   /**
@@ -220,12 +210,9 @@ class MemeOverlay {
     });
 
     // Hide with animation
-    this.overlay.classList.remove('md-visible');
+    this.overlay.classList.remove('md-visible', 'md-fading-out');
     this.overlay.classList.add('md-hidden');
     this.isVisible = false;
-
-    // Unlock body scroll
-    document.body.classList.remove('md-overlay-open');
 
     this.currentMemes = [];
     this.currentIndex = 0;

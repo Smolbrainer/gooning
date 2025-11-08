@@ -6,13 +6,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(0, 0, 0, 0.3);
   z-index: 999999;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  transition: opacity 0.3s ease;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
+  transition: opacity 0.5s ease;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* Hidden state */
@@ -24,30 +23,29 @@
 /* Visible state */
 .md-overlay.md-visible {
   opacity: 1;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
-/* Scrollable content wrapper */
-.md-scroll-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding: 20px 0;
+/* Fading out state */
+.md-overlay.md-fading-out {
+  opacity: 0;
+  transition: opacity 2s ease-out;
 }
+
+/* Scrollable content wrapper - removed */
 
 /* Container */
 .md-container {
   background: transparent;
-  width: 100%;
-  min-height: 100vh;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 60px 20px;
-  box-sizing: border-box;
-  scroll-snap-align: start;
-  animation: fadeIn 0.4s ease;
+  animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
@@ -61,133 +59,26 @@
   }
 }
 
-/* Fixed header at top */
-.md-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: rgba(26, 26, 26, 0.9);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: white;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 1000000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
+/* UI elements removed for clean overlay */
 
-.md-meme-name {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-  color: white;
-}
-
-.md-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  font-size: 32px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 12px;
-  border-radius: 8px;
-  transition: all 0.2s;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.md-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
-}
-
-/* Video Wrapper */
-.md-video-wrapper {
-  background: #000;
-  position: relative;
-  width: 100%;
-  max-width: 900px;
-  height: auto;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
-  margin: 0 auto;
-}
+/* Video Wrapper - Removed, videos are now direct children */
 
 .md-video {
-  width: 100%;
-  height: auto;
+  width: 100vw;
+  height: 100vh;
   display: block;
-  object-fit: contain;
-  max-height: 80vh;
+  object-fit: cover;
+  opacity: 0.6;
 }
 
 /* Ensure GIFs animate properly */
 .md-video.md-gif {
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  opacity: 0.6;
 }
 
-/* Meme info below video */
-.md-info {
-  text-align: center;
-  color: white;
-  margin-top: 20px;
-  padding: 0 20px;
-}
-
-.md-info h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0 0 10px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.md-info p {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 5px 0;
-}
-
-/* Scroll indicator */
-.md-scroll-indicator {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  animation: bounce 2s infinite;
-  pointer-events: none;
-}
-
-.md-scroll-indicator svg {
-  width: 24px;
-  height: 24px;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  50% {
-    transform: translateX(-50%) translateY(-10px);
-  }
-}
+/* Meme info and scroll indicator removed for clean overlay */
 
 /* Error State */
 .md-error {
@@ -217,57 +108,18 @@
   background: #c82333;
 }
 
-/* Position variants (for future use) */
-.md-overlay.md-top-left .md-container {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-}
+/* Position variants removed - fullscreen only */
 
-.md-overlay.md-top-right .md-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-}
-
-.md-overlay.md-bottom-left .md-container {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-}
-
-.md-overlay.md-bottom-right .md-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-}
-
-/* Responsive adjustments */
+/* Responsive adjustments - fullscreen on all devices */
 @media (max-width: 768px) {
-  .md-container {
-    max-width: 95%;
-    max-height: 85%;
-  }
-
-  .md-video-wrapper {
-    max-width: 100%;
-  }
-
-  .md-header {
-    padding: 12px 16px;
-  }
-
-  .md-meme-name {
-    font-size: 16px;
+  .md-video {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
   }
 }
 
 /* Ensure overlay doesn't interfere with page elements */
 .md-overlay * {
   box-sizing: border-box;
-}
-
-/* Prevent body scroll when overlay is visible */
-body.md-overlay-open {
-  overflow: hidden;
 }
