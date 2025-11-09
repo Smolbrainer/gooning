@@ -7,6 +7,12 @@ function ManageMemes({ memes, onMemesUpdated }) {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Debug log
+  React.useEffect(() => {
+    console.log('ManageMemes rendered with', memes?.length, 'memes');
+    console.log('onMemesUpdated callback exists:', !!onMemesUpdated);
+  }, [memes]);
+
   const startEdit = (meme) => {
     setEditingMeme(meme.id);
     setFormData({
@@ -84,37 +90,69 @@ function ManageMemes({ memes, onMemesUpdated }) {
   };
 
   const handleDelete = async (memeId, memeName) => {
+    console.log('Delete button clicked for:', memeName, memeId);
+    
     if (!confirm(`Are you sure you want to delete "${memeName}"?`)) {
+      console.log('Delete cancelled by user');
       return;
     }
 
+    console.log('Starting delete process...');
     setLoading(true);
     setError(null);
 
     try {
       const API_BASE_URL = 'http://localhost:8000';
+      console.log('Calling DELETE API:', `${API_BASE_URL}/api/memes/${memeId}`);
+      
       const response = await fetch(`${API_BASE_URL}/api/memes/${memeId}`, {
         method: 'DELETE'
       });
 
+      console.log('Delete response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Delete failed:', errorData);
         throw new Error(errorData.detail || 'Failed to delete meme');
       }
 
+      console.log('Delete successful, updating storage...');
+
       // Update cached memes
       const { allMemes, selectedMemes } = await chrome.storage.local.get(['allMemes', 'selectedMemes']);
+      console.log('Current memes count:', allMemes?.length);
+      
       const newMemes = allMemes.filter(m => m.id !== memeId);
-      const newSelected = selectedMemes.filter(id => id !== memeId);
+      const newSelected = (selectedMemes || []).filter(id => id !== memeId);
+      
+      console.log('New memes count after filter:', newMemes.length);
       
       await chrome.storage.local.set({
         allMemes: newMemes,
         selectedMemes: newSelected
       });
 
+      console.log('Storage updated successfully');
+
+      // Notify content scripts of the update
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'MEMES_UPDATED',
+            selectedMemes: newSelected
+          }).catch(() => {
+            // Ignore errors from tabs without content script
+          });
+        });
+      });
+
+      console.log('Calling onMemesUpdated callback...');
       if (onMemesUpdated) {
         onMemesUpdated(newMemes);
       }
+      
+      console.log('Delete complete!');
     } catch (err) {
       console.error('Error deleting meme:', err);
       setError(err.message);
@@ -145,6 +183,14 @@ function ManageMemes({ memes, onMemesUpdated }) {
           {error}
         </div>
       )}
+
+      {/* Debug test button */}
+      <button 
+        onClick={() => console.log('TEST BUTTON CLICKED!')} 
+        style={{background: 'red', color: 'white', padding: '10px', margin: '10px 0'}}
+      >
+        Test Click (Should log to console)
+      </button>
 
       <div className="search-box">
         <input
@@ -249,16 +295,25 @@ function ManageMemes({ memes, onMemesUpdated }) {
                     </div>
                     <div className="manage-actions">
                       <button
-                        onClick={() => startEdit(meme)}
+                        onClick={() => {
+                          console.log('Edit button clicked for:', meme.name);
+                          startEdit(meme);
+                        }}
                         className="edit-btn"
                         disabled={loading}
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(meme.id, meme.name)}
+                        onClick={(e) => {
+                          console.log('Delete button CLICKED!', meme.name, meme.id);
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(meme.id, meme.name);
+                        }}
                         className="delete-btn"
                         disabled={loading}
+                        type="button"
                       >
                         Delete
                       </button>

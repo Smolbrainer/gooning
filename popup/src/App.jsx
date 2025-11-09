@@ -134,8 +134,19 @@ function App() {
     setActiveTab('select');
   };
 
-  const handleMemesUpdated = (updatedMemes) => {
+  const handleMemesUpdated = async (updatedMemes) => {
     setMemes(updatedMemes);
+    
+    // Also refresh selected memes to ensure deleted memes are removed
+    const { selectedMemes } = await chrome.storage.local.get(['selectedMemes']);
+    const validSelectedIds = (selectedMemes || []).filter(id => 
+      updatedMemes.some(meme => meme.id === id)
+    );
+    
+    if (validSelectedIds.length !== selectedMemes?.length) {
+      await chrome.storage.local.set({ selectedMemes: validSelectedIds });
+      setSelectedMemeIds(validSelectedIds);
+    }
   };
 
   return (

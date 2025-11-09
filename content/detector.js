@@ -73,10 +73,29 @@ class MemeDetector {
 
     try {
       const pageContent = this.extractPageContent();
-      this.detectMemes(pageContent);
+      this.detectMemes(pageContent, { source: 'page' });
     } catch (error) {
       console.error('Error scanning page:', error);
     }
+  }
+
+  /**
+   * Scan arbitrary text for meme keywords (e.g., user input)
+   * @param {string} rawText - Text to scan
+   * @param {Object} context - Additional metadata about the text source
+   */
+  scanText(rawText, context = {}) {
+    if (typeof rawText !== 'string') return;
+
+    const normalizedText = rawText.toLowerCase();
+    if (!normalizedText.trim()) return;
+
+    const scanContext = {
+      source: context.source || 'input',
+      element: context.element || null
+    };
+
+    this.detectMemes(normalizedText, scanContext);
   }
 
   /**
@@ -95,9 +114,14 @@ class MemeDetector {
    * Detect memes in page content
    * @param {string} pageText - Page text content
    */
-  detectMemes(pageText) {
+  detectMemes(pageText, context = {}) {
+    if (typeof pageText !== 'string' || !pageText.trim()) {
+      return;
+    }
+
     const now = Date.now();
-    
+    const detectionSource = context.source || 'page';
+
     // Check global cooldown first - only 1 meme every 30 seconds
     if (this.lastGlobalDetection && (now - this.lastGlobalDetection) < this.cooldownPeriod) {
       const remaining = Math.ceil((this.cooldownPeriod - (now - this.lastGlobalDetection)) / 1000);
@@ -125,17 +149,17 @@ class MemeDetector {
     if (memeFrequencies.length > 0) {
       // Sort by frequency (highest first)
       memeFrequencies.sort((a, b) => b.count - a.count);
-      
+
       // Log frequency map
-      console.log('🎯 Meme frequency analysis:');
+      console.log(`🎯 Meme frequency analysis [source: ${detectionSource}]:`);
       memeFrequencies.forEach((entry, index) => {
         console.log(`  ${index + 1}. ${entry.meme.name}: ${entry.count} matches (${entry.keywords.join(', ')})`);
       });
-      
+
       const mostCommon = memeFrequencies[0];
-      console.log('✓ Showing most common:', mostCommon.meme.name);
+      console.log(`✓ Showing most common: ${mostCommon.meme.name} [source: ${detectionSource}]`);
       console.log('⏳ Next detection possible in 30 seconds');
-      this.handleDetection(mostCommon.meme, mostCommon.keywords.join(', '));
+      this.handleDetection(mostCommon.meme, mostCommon.keywords.join(', '), context);
     } else {
       // No matches found - don't play anything
       // Silently continue scanning
@@ -199,13 +223,13 @@ class MemeDetector {
    * @param {Object} meme - Detected meme object
    * @param {string} matchedKeyword - The keyword that matched
    */
-  handleDetection(meme, matchedKeyword) {
+  handleDetection(meme, matchedKeyword, context = {}) {
     // Update global detection time - starts 30 second cooldown for ALL memes
     this.lastGlobalDetection = Date.now();
 
     // Trigger callback
     if (this.onDetectionCallback) {
-      this.onDetectionCallback(meme, matchedKeyword);
+      this.onDetectionCallback(meme, matchedKeyword, context);
     }
 
     // Report detection to background script for stats
@@ -214,7 +238,8 @@ class MemeDetector {
         type: 'DETECTION_EVENT',
         memeId: meme.id,
         memeName: meme.name,
-        matchedKeyword: matchedKeyword
+        matchedKeyword: matchedKeyword,
+        source: context.source || 'page'
       }).catch(error => {
         // Silently ignore - extension may have been reloaded
         if (!error.message?.includes('Extension context invalidated')) {
