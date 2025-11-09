@@ -1,24 +1,30 @@
-// Meme Detector Module
-// Handles meme detection logic for page content
+// Meme Detector - Detection Logic
 
 class MemeDetector {
-  constructor() {
-    this.selectedMemes = [];
-    this.settings = null;
-    this.isDetecting = false;
+  constructor(selectedMemes) {
+    this.memes = selectedMemes || [];
     this.detectionInterval = null;
-    this.lastDetections = new Map(); // Track last detection time per meme
-    this.observer = null;
-    this.pageContent = { text: '', images: [] };
+    this.lastGlobalDetection = null; // Track last detection time (global cooldown)
+    this.cooldownPeriod = 15000; // 30 seconds global cooldown between ANY meme detections
+    this.isDetecting = false;
+    this.onDetectionCallback = null;
   }
 
   /**
-   * Initialize detector with memes and settings
+   * Update the list of memes to detect
+   * @param {Array} memes - Array of meme objects
    */
-  async initialize(selectedMemes, settings) {
-    this.selectedMemes = selectedMemes;
-    this.settings = settings;
-    console.log('Detector initialized with', selectedMemes.length, 'selected memes');
+  updateMemes(memes) {
+    this.memes = memes || [];
+    console.log('Detector updated with', this.memes.length, 'memes');
+  }
+
+  /**
+   * Set callback for when meme is detected
+   * @param {Function} callback - Function to call with detected meme
+   */
+  onDetection(callback) {
+    this.onDetectionCallback = callback;
   }
 
   /**
@@ -30,13 +36,8 @@ class MemeDetector {
       return;
     }
 
-    if (!this.settings || !this.settings.enabled) {
-      console.log('Detection disabled in settings');
-      return;
-    }
-
-    if (this.selectedMemes.length === 0) {
-      console.log('No memes selected for detection');
+    if (this.memes.length === 0) {
+      console.log('No memes selected, skipping detection');
       return;
     }
 
@@ -44,328 +45,222 @@ class MemeDetector {
     this.isDetecting = true;
 
     // Initial scan
-    this.performScan();
+    this.scanPage();
 
-    // Set up mutation observer for dynamic content
-    this.setupMutationObserver();
-
-    // Periodic scanning (every 3 seconds)
+    // Set up periodic scanning (every 2 seconds)
     this.detectionInterval = setInterval(() => {
-      this.performScan();
-    }, 3000);
+      this.scanPage();
+    }, 2000);
   }
 
   /**
    * Stop detection process
    */
   stopDetection() {
-    console.log('Stopping meme detection...');
-    this.isDetecting = false;
-
     if (this.detectionInterval) {
       clearInterval(this.detectionInterval);
       this.detectionInterval = null;
     }
-
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
+    this.isDetecting = false;
+    console.log('Detection stopped');
   }
 
   /**
-   * Set up mutation observer for dynamic content changes
+   * Scan page for meme keywords
    */
-  setupMutationObserver() {
-    this.observer = new MutationObserver((mutations) => {
-      // Debounce: only scan if significant changes
-      let shouldScan = false;
-
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          // Check if added nodes contain text or images
-          for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.textContent.length > 10 || node.querySelector('img')) {
-                shouldScan = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (shouldScan) {
-        // Debounced scan
-        this.debouncedScan();
-      }
-    });
-
-    // Observe the entire document body
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  /**
-   * Debounced scan function
-   */
-  debouncedScan = (() => {
-    let timeout;
-    return () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => this.performScan(), 500);
-    };
-  })();
-
-  /**
-   * Perform a detection scan
-   */
-  async performScan() {
-    try {
-      // Extract page content
-      this.pageContent = this.scanPageContent();
-
-      // Detect memes
-      const matches = await this.detectMemes(this.pageContent);
-
-      // Handle detections
-      for (const match of matches) {
-        this.handleDetection(match);
-      }
-    } catch (error) {
-      console.error('Error during detection scan:', error);
-    }
-  }
-
-  /**
-   * Extract text and images from page
-   */
-  scanPageContent() {
-    const content = {
-      text: '',
-      images: []
-    };
+  scanPage() {
+    if (this.memes.length === 0) return;
 
     try {
-      // Get visible text content
-      const textElements = document.querySelectorAll('p, h1, h2, h3, h4, h5, h6, span, div, article, section');
-      const texts = [];
-
-      textElements.forEach((el) => {
-        // Only get text from visible elements
-        if (this.isElementVisible(el)) {
-          const text = el.textContent.trim();
-          if (text.length > 0) {
-            texts.push(text);
-          }
-        }
-      });
-
-      // Limit to first 10,000 characters for performance
-      content.text = texts.join(' ').substring(0, 10000).toLowerCase();
-
-      // Get visible images
-      const images = document.querySelectorAll('img');
-      images.forEach((img) => {
-        if (this.isElementVisible(img) && img.src) {
-          content.images.push(img.src);
-        }
-      });
-
-      // Limit to first 20 images
-      content.images = content.images.slice(0, 20);
-
+      const pageContent = this.extractPageContent();
+      this.detectMemes(pageContent, { source: 'page' });
     } catch (error) {
-      console.error('Error scanning page content:', error);
+      console.error('Error scanning page:', error);
     }
-
-    return content;
   }
 
   /**
-   * Check if element is visible
+   * Scan arbitrary text for meme keywords (e.g., user input)
+   * @param {string} rawText - Text to scan
+   * @param {Object} context - Additional metadata about the text source
    */
-  isElementVisible(element) {
-    if (!element || !element.offsetParent) {
-      return false;
-    }
+  scanText(rawText, context = {}) {
+    if (typeof rawText !== 'string') return;
 
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' &&
-           style.visibility !== 'hidden' &&
-           style.opacity !== '0';
+    const normalizedText = rawText.toLowerCase();
+    if (!normalizedText.trim()) return;
+
+    const scanContext = {
+      source: context.source || 'input',
+      element: context.element || null
+    };
+
+    this.detectMemes(normalizedText, scanContext);
   }
 
   /**
-   * Detect memes in content
+   * Extract text content from page
+   * @returns {string} Page text content
    */
-  async detectMemes(content) {
-    const matches = [];
+  extractPageContent() {
+    // Get visible text from page body
+    const bodyText = document.body.innerText || document.body.textContent || '';
 
-    for (const meme of this.selectedMemes) {
-      // Check cooldown
-      if (this.isOnCooldown(meme.id)) {
-        continue;
-      }
+    // Limit to first 10,000 characters for performance
+    return bodyText.substring(0, 10000).toLowerCase();
+  }
 
-      // Text-based detection
-      const textMatch = this.analyzeText(content.text, meme.keywords || []);
+  /**
+   * Detect memes in page content
+   * @param {string} pageText - Page text content
+   */
+  detectMemes(pageText, context = {}) {
+    if (typeof pageText !== 'string' || !pageText.trim()) {
+      return;
+    }
 
-      if (textMatch.matched && textMatch.confidence >= this.settings.detectionSensitivity) {
-        matches.push({
-          meme: meme,
-          confidence: textMatch.confidence,
-          matchType: 'text'
+    const now = Date.now();
+    const detectionSource = context.source || 'page';
+
+    // Check global cooldown first - only 1 meme every 30 seconds
+    if (this.lastGlobalDetection && (now - this.lastGlobalDetection) < this.cooldownPeriod) {
+      const remaining = Math.ceil((this.cooldownPeriod - (now - this.lastGlobalDetection)) / 1000);
+      // Silently skip - in cooldown
+      return;
+    }
+    
+    // Build frequency map for all memes
+    const memeFrequencies = [];
+
+    for (const meme of this.memes) {
+      // Count how many keywords match for this meme
+      const matchCount = this.countKeywordMatches(pageText, meme.keywords);
+
+      if (matchCount > 0) {
+        memeFrequencies.push({
+          meme,
+          count: matchCount,
+          keywords: this.getMatchedKeywords(pageText, meme.keywords)
         });
       }
     }
 
-    return matches;
+    // If we found matches, trigger the most common one
+    if (memeFrequencies.length > 0) {
+      // Sort by frequency (highest first)
+      memeFrequencies.sort((a, b) => b.count - a.count);
+
+      // Log frequency map
+      console.log(`🎯 Meme frequency analysis [source: ${detectionSource}]:`);
+      memeFrequencies.forEach((entry, index) => {
+        console.log(`  ${index + 1}. ${entry.meme.name}: ${entry.count} matches (${entry.keywords.join(', ')})`);
+      });
+
+      const mostCommon = memeFrequencies[0];
+      console.log(`✓ Showing most common: ${mostCommon.meme.name} [source: ${detectionSource}]`);
+      console.log('⏳ Next detection possible in 30 seconds');
+      this.handleDetection(mostCommon.meme, mostCommon.keywords.join(', '), context);
+    } else {
+      // No matches found - don't play anything
+      // Silently continue scanning
+    }
   }
 
   /**
-   * Analyze text for meme keywords
+   * Count how many keywords match in the text
+   * @param {string} text - Text to search
+   * @param {Array} keywords - Keywords to look for
+   * @returns {number} Number of matches
    */
-  analyzeText(text, keywords) {
-    if (!keywords || keywords.length === 0) {
-      return { matched: false, confidence: 0 };
-    }
-
-    let matchCount = 0;
-    let maxConfidence = 0;
-
+  countKeywordMatches(text, keywords) {
+    let count = 0;
     for (const keyword of keywords) {
-      const lowerKeyword = keyword.toLowerCase();
-
-      // Exact match (highest confidence)
-      if (text.includes(lowerKeyword)) {
-        matchCount++;
-        maxConfidence = Math.max(maxConfidence, 1.0);
-        continue;
-      }
-
-      // Fuzzy match (word boundary check)
-      const words = text.split(/\s+/);
-      for (const word of words) {
-        const similarity = this.calculateSimilarity(word, lowerKeyword);
-        if (similarity > 0.8) {
-          matchCount++;
-          maxConfidence = Math.max(maxConfidence, similarity);
-          break;
-        }
-      }
+      const searchTerm = keyword.toLowerCase();
+      // Count occurrences of this keyword
+      const matches = (text.match(new RegExp(searchTerm, 'g')) || []).length;
+      count += matches;
     }
-
-    // Calculate overall confidence based on match ratio
-    const matchRatio = matchCount / keywords.length;
-    const confidence = Math.min(maxConfidence * matchRatio * 1.2, 1.0);
-
-    return {
-      matched: matchCount > 0,
-      confidence: confidence
-    };
+    return count;
   }
 
   /**
-   * Calculate string similarity (Levenshtein-based)
+   * Get all keywords that match in the text
+   * @param {string} text - Text to search
+   * @param {Array} keywords - Keywords to look for
+   * @returns {Array} Matched keywords
    */
-  calculateSimilarity(str1, str2) {
-    const len1 = str1.length;
-    const len2 = str2.length;
-
-    if (len1 === 0 || len2 === 0) {
-      return 0;
+  getMatchedKeywords(text, keywords) {
+    const matched = [];
+    for (const keyword of keywords) {
+      const searchTerm = keyword.toLowerCase();
+      if (text.includes(searchTerm)) {
+        matched.push(keyword);
+      }
     }
-
-    // Quick check for exact match
-    if (str1 === str2) {
-      return 1.0;
-    }
-
-    // Simple character overlap ratio
-    const chars1 = new Set(str1);
-    const chars2 = new Set(str2);
-    const intersection = new Set([...chars1].filter(x => chars2.has(x)));
-
-    const overlapRatio = (intersection.size * 2) / (chars1.size + chars2.size);
-
-    // Length similarity
-    const lengthSimilarity = 1 - Math.abs(len1 - len2) / Math.max(len1, len2);
-
-    // Combined score
-    return (overlapRatio + lengthSimilarity) / 2;
+    return matched;
   }
 
   /**
-   * Check if meme is on cooldown
+   * Check if any keywords are present in text
+   * @param {string} text - Text to search
+   * @param {Array} keywords - Keywords to look for
+   * @returns {string|null} Matched keyword or null
    */
-  isOnCooldown(memeId) {
-    const lastDetection = this.lastDetections.get(memeId);
-    if (!lastDetection) {
-      return false;
+  checkKeywords(text, keywords) {
+    for (const keyword of keywords) {
+      const searchTerm = keyword.toLowerCase();
+
+      // Simple exact match (for MVP)
+      if (text.includes(searchTerm)) {
+        return keyword;
+      }
     }
-
-    const cooldown = this.settings.detectionCooldown || 30000;
-    const timeSinceDetection = Date.now() - lastDetection;
-
-    return timeSinceDetection < cooldown;
+    return null;
   }
 
   /**
    * Handle a meme detection
+   * @param {Object} meme - Detected meme object
+   * @param {string} matchedKeyword - The keyword that matched
    */
-  handleDetection(match) {
-    const { meme, confidence } = match;
+  handleDetection(meme, matchedKeyword, context = {}) {
+    // Update global detection time - starts 30 second cooldown for ALL memes
+    this.lastGlobalDetection = Date.now();
 
-    console.log(`Meme detected: ${meme.name} (confidence: ${confidence.toFixed(2)})`);
-
-    // Update last detection time
-    this.lastDetections.set(meme.id, Date.now());
-
-    // Trigger overlay display
-    if (window.memeOverlay) {
-      window.memeOverlay.show(meme);
+    // Trigger callback
+    if (this.onDetectionCallback) {
+      this.onDetectionCallback(meme, matchedKeyword, context);
     }
 
-    // Send detection event to background
-    chrome.runtime.sendMessage({
-      type: 'DETECTION_EVENT',
-      data: {
+    // Report detection to background script for stats
+    try {
+      chrome.runtime.sendMessage({
+        type: 'DETECTION_EVENT',
         memeId: meme.id,
         memeName: meme.name,
-        confidence: confidence,
-        url: window.location.href
-      }
-    }).catch((error) => {
-      console.error('Error sending detection event:', error);
-    });
-  }
-
-  /**
-   * Update selected memes
-   */
-  updateSelectedMemes(memes) {
-    this.selectedMemes = memes;
-    console.log('Updated selected memes:', memes.length);
-  }
-
-  /**
-   * Update settings
-   */
-  updateSettings(settings) {
-    this.settings = settings;
-
-    if (!settings.enabled && this.isDetecting) {
-      this.stopDetection();
-    } else if (settings.enabled && !this.isDetecting) {
-      this.startDetection();
+        matchedKeyword: matchedKeyword,
+        source: context.source || 'page'
+      }).catch(error => {
+        // Silently ignore - extension may have been reloaded
+        if (!error.message?.includes('Extension context invalidated')) {
+          console.warn('Error sending detection event:', error.message);
+        }
+      });
+    } catch (error) {
+      // Extension context may be invalidated, ignore silently
     }
+  }
+
+  /**
+   * Check if currently detecting
+   * @returns {boolean}
+   */
+  isActive() {
+    return this.isDetecting;
   }
 }
 
-// Make detector available globally
+// Make available globally for content script
 if (typeof window !== 'undefined') {
   window.MemeDetector = MemeDetector;
 }

@@ -1,192 +1,87 @@
-// API communication utility
-// Handles all backend API requests
+// API communication helper for Meme Detector
 
-// Configure your backend API URL here
-const API_BASE_URL = 'http://localhost:3000/api';
-
-// API request timeout (10 seconds)
-const REQUEST_TIMEOUT = 10000;
+const API_BASE_URL = 'http://localhost:8000';
 
 const api = {
   /**
-   * Generic fetch wrapper with timeout and error handling
-   * @param {string} endpoint
-   * @param {Object} options
-   * @returns {Promise<Object>}
+   * Fetch all memes from the backend
+   * @param {string} category - Optional category filter
+   * @returns {Promise<Object[]>} Array of meme objects
    */
-  async request(endpoint, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-
+  async fetchMemes(category = null) {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
-      });
+      let url = `${API_BASE_URL}/api/memes`;
+      if (category) {
+        url += `?category=${encodeURIComponent(category)}`;
+      }
 
-      clearTimeout(timeoutId);
-
+      const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return { success: true, data };
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error.name === 'AbortError') {
-        console.error('API request timeout:', endpoint);
-        return { success: false, error: 'Request timeout' };
-      }
-
-      console.error('API request failed:', endpoint, error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * Fetch all available memes from backend
-   * @returns {Promise<Object>}
-   */
-  async fetchMemes() {
-    try {
-      const result = await this.request('/memes');
-
-      if (result.success) {
-        return {
-          success: true,
-          memes: result.data.memes || []
-        };
-      }
-
-      return {
-        success: false,
-        error: result.error,
-        memes: []
-      };
+      const memes = await response.json();
+      console.log('Fetched memes:', memes.length);
+      return memes;
     } catch (error) {
       console.error('Error fetching memes:', error);
-      return {
-        success: false,
-        error: error.message,
-        memes: []
-      };
+      throw error;
     }
   },
 
   /**
-   * Get a specific meme by ID
-   * @param {string} id
-   * @returns {Promise<Object>}
+   * Fetch a single meme by ID
+   * @param {string} memeId - UUID of the meme
+   * @returns {Promise<Object>} Meme object
    */
-  async getMemeById(id) {
+  async getMemeById(memeId) {
     try {
-      const result = await this.request(`/memes/${id}`);
-
-      if (result.success) {
-        return {
-          success: true,
-          meme: result.data.meme
-        };
+      const response = await fetch(`${API_BASE_URL}/api/memes/${memeId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return {
-        success: false,
-        error: result.error,
-        meme: null
-      };
+      const meme = await response.json();
+      return meme;
     } catch (error) {
       console.error('Error fetching meme:', error);
-      return {
-        success: false,
-        error: error.message,
-        meme: null
-      };
+      throw error;
     }
   },
 
   /**
-   * Get video URL for a meme
-   * @param {string} memeId
-   * @returns {Promise<Object>}
+   * Get video URL for a specific meme
+   * @param {string} memeId - UUID of the meme
+   * @returns {Promise<Object>} Object with video_url, meme_id, and meme_name
    */
   async getVideoUrl(memeId) {
     try {
-      const result = await this.request(`/video/${memeId}`);
-
-      if (result.success) {
-        return {
-          success: true,
-          videoUrl: result.data.videoUrl,
-          metadata: result.data.metadata
-        };
+      const response = await fetch(`${API_BASE_URL}/api/video/${memeId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return {
-        success: false,
-        error: result.error,
-        videoUrl: null
-      };
+      const videoData = await response.json();
+      return videoData;
     } catch (error) {
       console.error('Error fetching video URL:', error);
-      return {
-        success: false,
-        error: error.message,
-        videoUrl: null
-      };
+      throw error;
     }
   },
 
   /**
-   * Send detection request to backend
-   * @param {Object} content - { text: string, imageUrls: Array<string> }
-   * @returns {Promise<Object>}
+   * Check API health
+   * @returns {Promise<boolean>} True if API is healthy
    */
-  async sendDetectionRequest(content) {
+  async checkHealth() {
     try {
-      const result = await this.request('/detect', {
-        method: 'POST',
-        body: JSON.stringify({
-          content: content.text || '',
-          imageUrls: content.imageUrls || []
-        })
-      });
-
-      if (result.success) {
-        return {
-          success: true,
-          matches: result.data.matches || []
-        };
+      const response = await fetch(`${API_BASE_URL}/health`);
+      if (!response.ok) {
+        return false;
       }
 
-      return {
-        success: false,
-        error: result.error,
-        matches: []
-      };
-    } catch (error) {
-      console.error('Error sending detection request:', error);
-      return {
-        success: false,
-        error: error.message,
-        matches: []
-      };
-    }
-  },
-
-  /**
-   * Health check to verify API connection
-   * @returns {Promise<boolean>}
-   */
-  async healthCheck() {
-    try {
-      const result = await this.request('/health');
-      return result.success;
+      const health = await response.json();
+      return health.status === 'healthy';
     } catch (error) {
       console.error('API health check failed:', error);
       return false;
@@ -194,11 +89,56 @@ const api = {
   },
 
   /**
-   * Update the API base URL
-   * @param {string} url
+   * Save user selections to backend (optional for MVP)
+   * @param {string} userId - User identifier
+   * @param {string[]} memeIds - Array of selected meme IDs
+   * @param {Object} settings - User settings
+   * @returns {Promise<Object>} Updated user selection
    */
-  setBaseUrl(url) {
-    API_BASE_URL = url;
+  async saveUserSelections(userId, memeIds, settings = {}) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-selections`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          meme_ids: memeIds,
+          settings: settings
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Error saving user selections:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get user selections from backend (optional for MVP)
+   * @param {string} userId - User identifier
+   * @returns {Promise<Object>} User selection object
+   */
+  async getUserSelections(userId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/user-selections/${userId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const selections = await response.json();
+      return selections;
+    } catch (error) {
+      console.error('Error fetching user selections:', error);
+      throw error;
+    }
   }
 };
 

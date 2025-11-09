@@ -1,274 +1,143 @@
 # Meme Detector Backend API
 
-FastAPI backend for the Meme Detector Chrome Extension.
+FastAPI backend for the Meme Detector Chrome Extension, using Supabase for data storage.
 
-## Features
+## Setup Instructions
 
-- **RESTful API** with full CRUD operations for memes
-- **Async/await** support with SQLAlchemy async
-- **PostgreSQL database** via Supabase (production-ready!)
-- **Automatic meme detection** based on keyword matching
-- **CORS enabled** for Chrome extension compatibility
-- **Sample data seeding** with 20 popular memes
+### 1. Install Python Dependencies
 
-> 🗄️ **Now using Supabase PostgreSQL!** See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for details.
+```bash
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Set Up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Project Settings > API to find your:
+   - Project URL (SUPABASE_URL)
+   - Anon public key (SUPABASE_KEY)
+3. Go to SQL Editor and run the contents of `supabase_schema.sql`
+
+### 3. Configure Environment Variables
+
+```bash
+# Copy example env file
+cp .env.example .env
+
+# Edit .env and add your Supabase credentials
+# SUPABASE_URL=https://your-project.supabase.co
+# SUPABASE_KEY=your-anon-key-here
+```
+
+### 4. Seed Sample Data
+
+```bash
+python seed_data.py
+```
+
+This will populate your database with 10 sample memes.
+
+### 5. Start the API Server
+
+```bash
+# Using the start script
+chmod +x start.sh
+./start.sh
+
+# Or manually
+python main.py
+```
+
+The API will be available at `http://localhost:8000`
+
+## API Documentation
+
+Once the server is running, visit:
+- Interactive API docs: http://localhost:8000/docs
+- Alternative docs: http://localhost:8000/redoc
 
 ## API Endpoints
 
 ### Health Check
-```
-GET /api/health
-```
-Returns API health status
+- `GET /` - Root health check
+- `GET /health` - Health status
 
-### Get All Memes
-```
-GET /api/memes
-Query Parameters:
-  - category: Filter by category
-  - search: Search in name or keywords
-  - limit: Maximum results (default: 100)
-```
-Returns list of all available memes
+### Memes
+- `GET /api/memes` - Get all memes (optional: ?category=finance&limit=50)
+- `GET /api/memes/{meme_id}` - Get single meme by ID
+- `POST /api/memes` - Create new meme (admin)
+- `GET /api/video/{meme_id}` - Get video URL for meme
 
-### Get Meme by ID
-```
-GET /api/memes/{id}
-```
-Returns specific meme details
+### User Selections
+- `GET /api/user-selections/{user_id}` - Get user's selected memes
+- `POST /api/user-selections` - Save user's meme selections
 
-### Detect Memes
-```
-POST /api/detect
-Body: {
-  "content": "text to analyze",
-  "imageUrls": ["url1", "url2"]
-}
-```
-Returns detected memes with confidence scores
+## Testing the API
 
-### Get Video URL
-```
-GET /api/video/{memeId}
-```
-Returns video URL and metadata for a meme
-
-## Installation
-
-### Prerequisites
-- Python 3.8 or higher
-- pip
-
-### Quick Setup (Supabase PostgreSQL)
-
-**Automated (Recommended):**
 ```bash
-cd backend
-./setup_supabase.sh    # macOS/Linux
-setup_supabase.bat     # Windows
+# Get all memes
+curl http://localhost:8000/api/memes
+
+# Get single meme (replace with actual UUID from your database)
+curl http://localhost:8000/api/memes/{meme-uuid}
+
+# Get video URL
+curl http://localhost:8000/api/video/{meme-uuid}
 ```
-
-See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed Supabase configuration.
-
-### Manual Setup Steps
-
-1. **Navigate to backend directory**
-   ```bash
-   cd backend
-   ```
-
-2. **Create virtual environment (recommended)**
-   ```bash
-   python -m venv venv
-
-   # Activate on macOS/Linux:
-   source venv/bin/activate
-
-   # Activate on Windows:
-   venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   # .env is already configured with Supabase
-   # Or copy from example:
-   cp .env.example .env
-   ```
-
-5. **Initialize and seed the database**
-   ```bash
-   python seed_data.py seed
-   ```
-
-6. **Run the server**
-   ```bash
-   python -m app.main
-   ```
-
-   Or with uvicorn directly:
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 3000 --reload
-   ```
-
-The API will be available at `http://localhost:3000`
-
-## Database Management
-
-### Seed Database
-Populate database with sample meme data:
-```bash
-python seed_data.py seed
-```
-
-### List All Memes
-View all memes in the database:
-```bash
-python seed_data.py list
-```
-
-## Project Structure
-
-```
-backend/
-├── app/
-│   ├── __init__.py          # Package initializer
-│   ├── main.py              # FastAPI application and routes
-│   ├── models.py            # SQLAlchemy database models
-│   ├── schemas.py           # Pydantic validation schemas
-│   └── database.py          # Database configuration
-├── data/
-│   └── memes.db             # SQLite database (created on first run)
-├── seed_data.py             # Database seeding script
-├── requirements.txt         # Python dependencies
-├── .env                     # Environment variables
-├── .env.example             # Example environment variables
-└── README.md                # This file
-```
-
-## Configuration
-
-Edit `.env` file to configure:
-
-- `API_HOST`: Host to bind to (default: 0.0.0.0)
-- `API_PORT`: Port to run on (default: 3000)
-- `DATABASE_URL`: Database connection string (default: SQLite)
 
 ## Development
 
-### Hot Reload
-The server runs with `--reload` flag by default, so changes to code will automatically restart the server.
+### Project Structure
 
-### Testing Endpoints
+```
+backend/
+├── main.py              # FastAPI application and routes
+├── models.py            # Pydantic models
+├── database.py          # Supabase client setup
+├── requirements.txt     # Python dependencies
+├── seed_data.py         # Database seeding script
+├── supabase_schema.sql  # Database schema
+├── .env.example         # Environment variables template
+├── .env                 # Your local environment (not in git)
+└── README.md            # This file
+```
 
-Visit `http://localhost:3000/docs` for interactive API documentation (Swagger UI)
+### Adding New Memes
 
-Visit `http://localhost:3000/redoc` for alternative API documentation (ReDoc)
-
-### Test with curl
+You can add memes via the API or directly in Supabase:
 
 ```bash
-# Health check
-curl http://localhost:3000/api/health
-
-# Get all memes
-curl http://localhost:3000/api/memes
-
-# Get specific meme
-curl http://localhost:3000/api/memes/drake-hotline-bling
-
-# Detect memes
-curl -X POST http://localhost:3000/api/detect \
+curl -X POST http://localhost:8000/api/memes \
   -H "Content-Type: application/json" \
-  -d '{"content": "This is fine everything is burning"}'
-```
-
-## Adding New Memes
-
-### Method 1: Edit seed_data.py
-Add new meme entries to the `SAMPLE_MEMES` list and re-run:
-```bash
-python seed_data.py seed
-```
-
-### Method 2: Direct Database Insert
-```python
-from app.models import Meme
-from app.database import AsyncSessionLocal
-
-async def add_meme():
-    async with AsyncSessionLocal() as session:
-        new_meme = Meme(
-            id="unique-id",
-            name="Meme Name",
-            description="Description",
-            keywords=["keyword1", "keyword2"],
-            video_url="https://example.com/video.mp4",
-            category="category",
-            popularity_score=50
-        )
-        session.add(new_meme)
-        await session.commit()
+  -d '{
+    "name": "New Meme",
+    "description": "Description here",
+    "keywords": ["keyword1", "keyword2"],
+    "video_url": "https://example.com/video.mp4",
+    "category": "general",
+    "popularity_score": 50
+  }'
 ```
 
 ## Troubleshooting
 
-### Port Already in Use
-If port 3000 is already in use, change `API_PORT` in `.env` or kill the process:
-```bash
-# Find process
-lsof -i :3000
+**Connection errors**: Make sure your Supabase credentials in `.env` are correct
 
-# Kill process
-kill -9 <PID>
-```
+**Port already in use**: Change `API_PORT` in `.env` to a different port
 
-### Database Issues
-Delete the database file and reseed:
-```bash
-rm data/memes.db
-python seed_data.py seed
-```
+**Database errors**: Verify the schema was created by running `supabase_schema.sql`
 
-### CORS Issues
-The API allows all origins by default. If you need stricter CORS:
-Edit `app/main.py` and modify the `allow_origins` list:
-```python
-allow_origins=["http://localhost:3000", "chrome-extension://your-extension-id"]
-```
+## Notes for Production
 
-## Production Deployment
-
-For production use:
-
-1. **Use PostgreSQL** instead of SQLite
-   ```bash
-   # Install PostgreSQL driver
-   pip install asyncpg
-
-   # Update .env
-   DATABASE_URL=postgresql+asyncpg://user:pass@localhost/dbname
-   ```
-
-2. **Disable auto-reload**
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 3000
-   ```
-
-3. **Use a production ASGI server**
-   ```bash
-   pip install gunicorn
-   gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
-   ```
-
-4. **Set up reverse proxy** (Nginx, Caddy, etc.)
-
-5. **Enable HTTPS** with SSL certificate
-
-## License
-
-MIT License - See main project LICENSE file
+- Replace placeholder video URLs with real meme videos
+- Set specific CORS origins instead of wildcard
+- Add authentication for admin endpoints
+- Consider rate limiting
+- Add proper logging and monitoring

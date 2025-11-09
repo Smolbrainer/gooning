@@ -1,281 +1,131 @@
-/* Meme Detector Content Styles */
+/* Meme Detector Overlay Styles */
 
-/* Overlay Container */
 .md-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2147483647; /* Maximum z-index */
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  transition: opacity 0.05s ease;
+  overflow: hidden;
   pointer-events: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* Hidden state */
 .md-overlay.md-hidden {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* Backdrop */
-.md-backdrop {
-  position: absolute;
+/* Visible state */
+.md-overlay.md-visible {
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Fading out state */
+.md-overlay.md-fading-out {
+  opacity: 0;
+  transition: opacity 2s ease-out;
+}
+
+/* Scrollable content wrapper - removed */
+
+/* Container */
+.md-container {
+  background: transparent;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.md-overlay:not(.md-hidden) .md-backdrop {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Main Container */
-.md-container {
-  position: fixed;
-  background: #1e1e1e;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  max-width: 400px;
-  width: 90%;
-  transform: scale(0.8);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  pointer-events: auto;
-  overflow: hidden;
-}
-
-.md-container.md-show {
-  transform: scale(1);
-  opacity: 1;
-}
-
-/* Position variants */
-.md-container.md-top-left {
-  top: 20px;
-  left: 20px;
-  transform-origin: top left;
-}
-
-.md-container.md-top-right {
-  top: 20px;
-  right: 20px;
-  transform-origin: top right;
-}
-
-.md-container.md-bottom-left {
-  bottom: 20px;
-  left: 20px;
-  transform-origin: bottom left;
-}
-
-.md-container.md-bottom-right {
-  bottom: 20px;
-  right: 20px;
-  transform-origin: bottom right;
-}
-
-/* Header */
-.md-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #2a2a2a;
-  border-bottom: 1px solid #333;
-}
-
-.md-meme-name {
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 14px;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.md-close {
-  background: transparent;
-  border: none;
-  color: #ffffff;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background 0.2s ease;
+  align-items: center;
+  animation: fadeInInstant 0.1s ease;
 }
 
-.md-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+@keyframes fadeInInstant {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-/* Video Wrapper */
-.md-video-wrapper {
-  position: relative;
-  width: 100%;
-  background: #000000;
-  min-height: 200px;
-}
+/* UI elements removed for clean overlay */
+
+/* Video Wrapper - Removed, videos are now direct children */
 
 .md-video {
-  width: 100%;
-  height: auto;
+  width: 100vw;
+  height: 100vh;
   display: block;
-  max-height: 400px;
+  object-fit: cover;
+  opacity: 0.6;
 }
 
-.md-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #ffffff;
-  font-size: 14px;
-  pointer-events: none;
-}
-
-/* Controls */
-.md-controls {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #2a2a2a;
-  border-top: 1px solid #333;
-}
-
-.md-controls button {
-  flex: 1;
-  background: #3a3a3a;
+/* YouTube iframe styling */
+.md-video.md-youtube {
+  width: 100vw;
+  height: 100vh;
   border: none;
-  color: #ffffff;
-  padding: 8px 12px;
+  opacity: 0.6;
+}
+
+/* Ensure GIFs animate properly */
+.md-video.md-gif {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  opacity: 0.6;
+}
+
+/* Meme info and scroll indicator removed for clean overlay */
+
+/* Error State */
+.md-error {
+  padding: 40px;
+  text-align: center;
+  color: #dc3545;
+}
+
+.md-error p {
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.md-close-error {
+  background: #dc3545;
+  border: none;
+  color: white;
+  padding: 10px 24px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.md-controls button:hover {
-  background: #4a4a4a;
-}
-
-.md-controls button:active {
-  background: #2a2a2a;
-}
-
-.md-replay {
-  color: #4CAF50;
-}
-
-.md-replay:hover {
-  background: rgba(76, 175, 80, 0.1);
-}
-
-.md-disable {
-  color: #f44336;
-}
-
-.md-disable:hover {
-  background: rgba(244, 67, 54, 0.1);
-}
-
-/* Notification */
-.md-notification {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #2a2a2a;
-  color: #ffffff;
-  padding: 12px 24px;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   font-size: 14px;
-  z-index: 2147483647;
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  pointer-events: none;
+  font-weight: 600;
+  transition: background 0.2s;
 }
 
-.md-notification.md-show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
+.md-close-error:hover {
+  background: #c82333;
 }
 
-/* Mobile Responsive */
-@media (max-width: 480px) {
-  .md-container {
-    max-width: none;
-    width: calc(100% - 20px);
-  }
+/* Position variants removed - fullscreen only */
 
-  .md-container.md-top-left,
-  .md-container.md-top-right {
-    top: 10px;
-    left: 10px;
-    right: 10px;
-  }
-
-  .md-container.md-bottom-left,
-  .md-container.md-bottom-right {
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-  }
-
-  .md-controls {
-    flex-direction: column;
-  }
-
-  .md-controls button {
-    width: 100%;
+/* Responsive adjustments - fullscreen on all devices */
+@media (max-width: 768px) {
+  .md-video {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
   }
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .md-container {
-    border: 2px solid #ffffff;
-  }
-
-  .md-controls button {
-    border: 1px solid #ffffff;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .md-container,
-  .md-backdrop,
-  .md-notification {
-    transition: none;
-  }
-}
-
-/* Dark mode support (if page uses it) */
-@media (prefers-color-scheme: dark) {
-  .md-container {
-    background: #1a1a1a;
-  }
-
-  .md-header,
-  .md-controls {
-    background: #252525;
-  }
+/* Ensure overlay doesn't interfere with page elements */
+.md-overlay * {
+  box-sizing: border-box;
 }
