@@ -5,7 +5,7 @@ class MemeDetector {
     this.memes = selectedMemes || [];
     this.detectionInterval = null;
     this.lastGlobalDetection = null; // Track last detection time (global cooldown)
-    this.cooldownPeriod = 30000; // 30 seconds global cooldown between ANY meme detections
+    this.cooldownPeriod = 15000; // 30 seconds global cooldown between ANY meme detections
     this.isDetecting = false;
     this.onDetectionCallback = null;
   }
