@@ -1,12 +1,44 @@
-# Meme Detector Chrome Extension - MVP
+# Meme Detector Chrome Extension
 
-A Chrome extension that automatically detects memes on web pages and plays corresponding videos when matches are found.
+A Chrome extension that automatically detects memes on web pages and plays corresponding videos when matches are found. This repository contains the Chrome extension frontend (popup, content scripts, overlay), a lightweight FastAPI backend that stores meme metadata and videos (Supabase), and a background service worker that manages caching, settings and statistics.
 
 ## Tech Stack
 
 - **Frontend**: Chrome Extension (Manifest V3) with React popup
 - **Backend**: FastAPI + Supabase (PostgreSQL)
 - **Detection**: Keyword-based text matching
+
+## New / Notable Features (since MVP)
+
+The project has added several user-facing and developer features beyond a minimal proof-of-concept. Highlights:
+
+- Popup / UI
+  - Add new memes directly from the popup (name, description, comma-separated keywords, category, and video/GIF/YouTube URL).
+  - Manage memes: inline edit, delete (with confirmation), and search/filter.
+  - Meme list supports searching by name, keyword, or category; select/deselect individual memes; and a Select All / Deselect All toggle.
+  - Selected Memes panel with quick Remove buttons and a Clear All action.
+  - Detection toggle and settings (autoplay, overlay position) are persisted in extension storage.
+
+- Statistics
+  - Built-in Stats view in the popup showing total detections, unique memes detected, and per-meme detection counts with a clear-stats button.
+
+- Content script & detection
+  - Scans page text for keywords every 2 seconds and whenever the DOM changes (MutationObserver). The scanned text is limited to the first 10,000 characters for performance.
+  - An input "mirror" listens to user typing (inputs / textareas / contenteditables) and scans those texts in real time.
+  - Detection selects the most-common matching meme (by keyword match counts) and forwards a detection event to the background script.
+  - Global cooldown between detections to avoid spam: 15 seconds (implemented in code).
+
+- Overlay / playback
+  - Overlay supports YouTube embeds (converted to embed URLs with autoplay/loop), GIFs, and plain video files (mp4/webm). Videos attempt muted autoplay, then unmute shortly after.
+  - IntersectionObserver is used to play/pause actual video elements as they scroll into view.
+  - Overlays auto-fade after 10 seconds and gracefully stop audio when hiding.
+
+- Background / service worker
+  - Caches meme metadata from the backend (`/api/memes`) into `chrome.storage.local` on install and refreshes periodically (every 30 minutes).
+  - Handles detection events to update statistics in local storage.
+  - Provides bridge messages for API health checks and a page-bridge action to request closing the active tab.
+
+These features are implemented across `popup/src/components/*`, `content/*.js`, `background/service-worker.js`, and `backend/*`.
 
 ## Project Structure
 
@@ -43,6 +75,7 @@ gooning/
 │   └── icons/              # Extension icons
 ├── manifest.json           # Extension manifest
 └── README.md               # This file
+
 ```
 
 ## Setup Instructions
@@ -129,11 +162,13 @@ assets/icons/icon128.png
 
 ### For Users
 
-1. **Open the Extension**: Click the Meme Detector icon in your Chrome toolbar
-2. **Select Memes**: Check the memes you want to detect from the list
-3. **Browse the Web**: Visit any website
-4. **Automatic Detection**: When a selected meme's keyword appears on the page, a video overlay will appear
-5. **Close Overlay**: Click the X button or click outside the overlay
+1. **Open the Extension**: Click the Meme Detector icon in your Chrome toolbar.
+2. **Select Memes**: Use the popup to select/deselect memes you want to detect. Use the search box to filter. Use "Select All" to enable detection for all results.
+3. **Add a Meme**: Use the "Add New Meme" form to create a new meme. Enter comma-separated keywords and a video/GIF/YouTube URL. New memes are POSTed to the backend and cached locally.
+4. **Manage Memes**: Open "Manage Memes" to edit or delete entries. Deleting a meme updates local cache and notifies content scripts to reinitialize detection.
+5. **View Stats**: Open the "Stats" panel in the popup to see total detections and per-meme counts. Use "Clear Stats" to reset.
+6. **Browse the Web**: Visit any website. Detection runs periodically and on DOM changes; when a match is found the overlay will appear.
+7. **Overlay Controls**: The overlay will auto-fade after ~10 seconds. Use popup settings to change autoplay or overlay position.
 
 ### For Developers
 
@@ -165,28 +200,48 @@ Open this file in Chrome and the detector should trigger overlays for any select
 
 - **Check API Connection**: Visit http://localhost:8000/health
 
+### How the detection flow works (developer notes)
+
+- On extension install the background service worker caches memes from the API into `chrome.storage.local` (`allMemes`).
+- The popup writes `selectedMemes` (array of meme IDs) into `chrome.storage.local` when users select/deselect or save selections.
+- The content script initializes a `MemeDetector` instance with selected meme objects and:
+  - Scans the first 10,000 characters of page text every 2 seconds.
+  - Scans input/textarea/contenteditable text in real time (input mirror).
+  - Uses a MutationObserver to scan after DOM mutations (debounced).
+  - When a meme is detected, it calls `MemeOverlay.show()` and sends a `DETECTION_EVENT` message to the background worker for stats.
+
+
 - **View Storage**:
   - DevTools > Application > Storage > Extension Storage
 
-## MVP Features
+### Implemented Features (MVP + additions)
 
-### Included
-- ✅ Meme selection from backend API
-- ✅ Keyword-based text detection
-- ✅ Video overlay on detection
+The extension now includes the following implemented features:
+
+- ✅ Meme selection from backend API (cached locally by the service worker)
+- ✅ Keyword-based text detection (page scans + input mirror)
+- ✅ Video overlay on detection (YouTube, GIF, mp4/webm)
 - ✅ Enable/disable toggle
-- ✅ Selection persistence
+- ✅ Selection persistence in `chrome.storage.local`
 - ✅ Dynamic content detection (MutationObserver)
-- ✅ Cooldown between detections (30 seconds per meme)
+- ✅ Cooldown between detections (global cooldown: 15 seconds)
+- ✅ Add new memes from the popup (POST /api/memes)
+- ✅ Manage memes (inline edit / PUT, delete / DELETE with confirmation)
+- ✅ Popup search & filter, Select All / Deselect All
+- ✅ Selected Memes panel with Clear All
+- ✅ Detection statistics and a Stats view with per-meme counts
 
-### Not Included (Future)
-- ❌ Image-based detection
-- ❌ Settings panel (sensitivity, position, etc.)
-- ❌ Search/filter in popup
-- ❌ Statistics dashboard
-- ❌ Per-page disable
-- ❌ Custom overlay positioning
-- ❌ Fuzzy keyword matching
+
+### Not Included / Future Work
+
+The following are planned or optional improvements:
+
+- Image-based or ML-based visual detection (not implemented)
+- Advanced fuzzy keyword matching / synonyms
+- Per-origin or per-page disable controls
+- Rich settings UI for sensitivity, overlay size, and position presets
+- Admin authentication + role-based permissions for meme management
+- Built-in video hosting / CDN integration for reliability
 
 ## API Endpoints
 
@@ -195,6 +250,10 @@ Open this file in Chrome and the detector should trigger overlays for any select
 - `GET /api/video/{id}` - Get video URL for meme
 - `POST /api/user-selections` - Save user selections
 - `GET /api/user-selections/{user_id}` - Get user selections
+
+Additional notes:
+- `GET /health` returns API health.
+- The backend endpoints support create/update/delete for memes. The popup components call these endpoints (see `popup/src/components/AddMeme.jsx` and `ManageMemes.jsx`).
 
 ## Configuration
 
@@ -224,6 +283,11 @@ const API_BASE_URL = 'http://localhost:8000';
 - Verify extension is enabled (toggle in popup)
 - Open DevTools console to see detection logs
 
+If detections are not appearing:
+- Ensure the service worker has cached `allMemes` (open chrome://extensions > Service worker > Inspect and check logs). The background worker periodically refreshes memes every 30 minutes and on install.
+- Confirm `selectedMemes` contains meme IDs in `chrome.storage.local` (DevTools > Application > Storage > Extension Storage).
+- If a newly added meme doesn't show immediately, try "Refresh memes" from the popup (or reload the extension) to fetch the latest cache.
+
 ### Video Not Playing
 - Check video URL in backend database
 - Verify video URL is accessible
@@ -242,10 +306,20 @@ const API_BASE_URL = 'http://localhost:8000';
 3. **Make Content Script Changes**: Edit files in `content/`, then reload extension
 4. **Reload Extension**: Go to chrome://extensions/ and click reload icon
 
+## Files to inspect for behavior
+
+- `popup/src/components/AddMeme.jsx` — add memes via API and update local cache
+- `popup/src/components/ManageMemes.jsx` — inline editing, deletion and storage sync
+- `popup/src/components/Stats.jsx` — read/write stats from `chrome.storage.local`
+- `content/detector.js`, `content/overlay.js`, `content/content.js` — detection, overlay and input mirroring logic
+- `background/service-worker.js` — initialization, caching, stats update and periodic refresh
+- `backend/main.py` — FastAPI CRUD endpoints and user selections
+
+
 ## Notes
 
 - Sample videos use placeholder URLs - replace with real meme videos
-- Cooldown period: 30 seconds between same meme detections
+- Cooldown period: 15 seconds between detections (global cooldown implemented in detector)
 - Detection scans every 2 seconds + on DOM changes
 - Detection limited to first 10,000 characters of page text
 
@@ -274,3 +348,4 @@ For issues or questions:
 **Note**: This extension requires a backend API to function. See "Backend API Requirements" section for details.
 - Ts bs
 This is a learning/demo project. Use at your own discretion.
+
