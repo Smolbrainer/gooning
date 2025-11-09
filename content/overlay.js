@@ -89,8 +89,9 @@ class MemeOverlay {
       } else if (isGif) {
         mediaElement = `<img class="md-video md-gif" data-video-index="${index}" src="${url}" alt="${meme.name}">`;
       } else {
-        // Regular video file - unmute for audio
-        mediaElement = `<video class="md-video" data-video-index="${index}" loop playsinline>
+        // Regular video file - muted by default to allow autoplay
+        // Add preload="auto" to ensure video loads
+        mediaElement = `<video class="md-video" data-video-index="${index}" loop playsinline preload="auto" crossorigin="anonymous" muted>
             <source src="${url}" type="video/mp4">
             Your browser does not support the video tag.
           </video>`;
@@ -131,12 +132,24 @@ class MemeOverlay {
     // Video error and play handling (only for actual videos)
     actualVideos.forEach((video, index) => {
       video.addEventListener('error', (e) => {
-        console.error('Video playback error for video', index, ':', e);
+        console.error('❌ Video playback error for video', index, ':', e);
+        console.error('Video source:', video.src);
       });
 
       video.addEventListener('loadeddata', () => {
-        console.log('Video', index, 'loaded successfully');
+        console.log('✅ Video', index, 'loaded successfully');
       });
+
+      video.addEventListener('loadstart', () => {
+        console.log('⏳ Video', index, 'started loading...');
+      });
+
+      video.addEventListener('canplay', () => {
+        console.log('▶️ Video', index, 'can play');
+      });
+
+      // Try to load the video
+      video.load();
     });
 
     // GIF error handling
@@ -153,8 +166,15 @@ class MemeOverlay {
     // YouTube iframe handling
     youtubeIframes.forEach((iframe, index) => {
       iframe.addEventListener('load', () => {
-        console.log('YouTube iframe', index, 'loaded successfully');
+        console.log('✅ YouTube iframe', index, 'loaded successfully');
       });
+
+      iframe.addEventListener('error', (e) => {
+        console.error('❌ YouTube iframe error for iframe', index, ':', e);
+        console.error('YouTube URL:', iframe.src);
+      });
+
+      console.log('🎥 YouTube iframe', index, 'URL:', iframe.src);
     });
 
     // Intersection observer to play/pause videos as they scroll into view
@@ -203,6 +223,13 @@ class MemeOverlay {
       memes = [memes];
     }
 
+    console.log('🎬 Showing overlay with', memes.length, 'meme(s)');
+    memes.forEach((meme, idx) => {
+      console.log(`  ${idx + 1}. ${meme.name}`);
+      console.log(`     URL: ${meme.video_url}`);
+      console.log(`     Type: ${this.isYouTubeUrl(meme.video_url) ? 'YouTube' : meme.video_url?.endsWith('.gif') ? 'GIF' : 'Video'}`);
+    });
+
     if (this.isVisible) {
       // Already showing, hide first
       this.hide();
@@ -229,19 +256,60 @@ class MemeOverlay {
     // Start playing first video (if it's a video element, not a GIF or YouTube)
     // YouTube iframes autoplay via URL parameters
     if (this.videos.length > 0 && this.videos[0].tagName === 'VIDEO') {
-      try {
-        await this.videos[0].play();
-      } catch (error) {
-        console.warn('Autoplay blocked:', error);
+      const video = this.videos[0];
+      
+      // Wait for video to be ready
+      const playVideo = async () => {
+        try {
+          console.log('▶️ Attempting to play video (muted for autoplay)...');
+          // Start muted to allow autoplay
+          video.muted = true;
+          await video.play();
+          console.log('✅ Video playing successfully (muted)');
+          
+          // Unmute after it starts playing
+          // Note: You can comment this out if you want videos to stay muted
+          setTimeout(() => {
+            video.muted = false;
+            console.log('🔊 Video unmuted');
+          }, 100);
+        } catch (error) {
+          console.warn('⚠️ Autoplay blocked or video not ready:', error.message);
+          
+          // Try again after a short delay
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Retrying video play (muted)...');
+              video.muted = true;
+              await video.play();
+              console.log('✅ Video playing on retry (muted)');
+              
+              // Try to unmute
+              setTimeout(() => {
+                video.muted = false;
+                console.log('🔊 Video unmuted on retry');
+              }, 100);
+            } catch (retryError) {
+              console.error('❌ Video play failed on retry:', retryError.message);
+            }
+          }, 500);
+        }
+      };
+
+      // If video is ready, play immediately, otherwise wait for it
+      if (video.readyState >= 2) {
+        playVideo();
+      } else {
+        video.addEventListener('canplay', playVideo, { once: true });
       }
     }
 
-    // Auto-fade after 5 seconds
+    // Auto-fade after 10 seconds
     setTimeout(() => {
       this.fadeOut();
-    }, 5000);
+    }, 10000);
 
-    console.log('Showing overlay with', memes.length, 'meme(s)');
+    console.log('✨ Overlay visible');
   }
 
   /**
