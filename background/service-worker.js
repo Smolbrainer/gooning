@@ -103,6 +103,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(() => sendResponse({ healthy: false }));
     return true;
   }
+
+  if (message.type === 'CLOSE_ACTIVE_TAB') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+
+      const activeTab = tabs && tabs[0];
+      if (!activeTab || activeTab.id === undefined) {
+        sendResponse({ success: false, error: 'No active tab found' });
+        return;
+      }
+
+      chrome.tabs.remove(activeTab.id, () => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          sendResponse({ success: true });
+        }
+      });
+    });
+
+    return true; // Asynchronous response
+  }
 });
 
 // Handle detection event
