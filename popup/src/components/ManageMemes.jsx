@@ -184,14 +184,6 @@ function ManageMemes({ memes, onMemesUpdated }) {
         </div>
       )}
 
-      {/* Debug test button */}
-      <button 
-        onClick={() => console.log('TEST BUTTON CLICKED!')} 
-        style={{background: 'red', color: 'white', padding: '10px', margin: '10px 0'}}
-      >
-        Test Click (Should log to console)
-      </button>
-
       <div className="search-box">
         <input
           type="text"
